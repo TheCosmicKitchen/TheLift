@@ -173,10 +173,6 @@ input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); ou
 .io { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); }
 .io input[type=file] { display: none; }
 
-/* Cue */
-.cue-of-day { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 18px; align-items: center; border-top: 3px solid var(--ink); padding-top: 18px; }
-.cue-of-day .big { font: 800 64px/0.8 var(--display); color: var(--accent); }
-.cue-of-day p { margin: 4px 0 0; font-size: clamp(18px, 2.4vw, 23px); line-height: 1.35; font-weight: 500; max-width: 62ch; text-wrap: balance; }
 .foot { font-size: 12.5px; color: var(--muted); max-width: 70ch; margin: 0; }
 
 /* Builder dialog */
@@ -225,7 +221,6 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
   .day .df { display: none; }
   .day .dd { font-size: 19px; }
   .card { padding: 16px 14px; }
-  .cue-of-day { grid-template-columns: 1fr; gap: 6px; }
   .bform { padding: 18px 14px; }
 }
 @media (prefers-reduced-motion: reduce) { .progress i { transition: none; } }
@@ -317,13 +312,6 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
     </div>
   </section>
 
-  <section class="cue-of-day">
-    <div class="big" aria-hidden="true">“</div>
-    <div>
-      <div class="label">Cue of the day</div>
-      <p id="cue"></p>
-    </div>
-  </section>
 
   <p class="foot">Suggested sessions rotate by weekday and week, so every day has its own card. RPE is effort out of 10 (RPE 8 = about two reps left in the tank). Heart-rate zones use % of your max heart rate. Scale everything to how you feel today.</p>
 </div>
@@ -528,30 +516,6 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
     { id: "off", name: "No lifting" }
   ];
 
-  const CUES = [
-    "Brace before you move. Breathe into your belly, lock it in, then lift.",
-    "Easy days easy, hard days hard. Most training lives in the middle and goes nowhere.",
-    "Add one rep or a little weight from last week. Small wins stack.",
-    "Own the lowering phase. Three seconds down builds more than you think.",
-    "If you can talk in full sentences, you're in Zone 2. Stay there.",
-    "Warm up with the movement itself: empty bar, then light sets, then work sets.",
-    "Leave one or two reps in the tank on most sets. Save failure for the last isolation set.",
-    "Sleep is the cheapest performance booster you have. Aim for seven hours or more.",
-    "Write down what you lifted. Progress you can see keeps you coming back.",
-    "Bad day? Do the warm-up and the first exercise. Starting is the hard part.",
-    "Grip the bar like you're trying to bend it. Tension travels up the arm.",
-    "Rest long enough on big lifts. Two to three minutes is training, not slacking.",
-    "On intervals, the first rep should feel too easy. The last one shouldn't feel impossible.",
-    "Drink water before you're thirsty, and eat protein at every meal.",
-    "Film one set this week from the side. The camera sees what you can't feel.",
-    "Consistency beats intensity. Three good weeks beat one heroic day.",
-    "Breathe out through the hardest part of the rep, not before it.",
-    "Walk after meals. Ten minutes helps recovery more than it looks.",
-    "Keep the bar path straight and the weight over mid-foot.",
-    "If a joint hurts, swap the exercise, not the session.",
-    "Finish cardio with five easy minutes. Let the heart rate come down on purpose.",
-    "Pick one cue per set. Thinking about five things means doing none of them well."
-  ];
 
   // Workout types for your own workouts
   const TYPES = [
@@ -675,7 +639,7 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
       const opts = CARDIO[cardioType].filter(v => !v.only || v.only.includes(mode.id));
       cardio = opts[(wk + swaps.cardio) % opts.length];
     }
-    return { key, dow, wk, liftType, cardioType, lift, cardio, mode, cue: CUES[dayNumber(d) % CUES.length] };
+    return { key, dow, wk, liftType, cardioType, lift, cardio, mode };
   }
   const liftLabel = t => t === "off" ? "" : DAYTYPES[t].name;
   const cardioLabel = t => t === "off" ? "" : SESS[t];
@@ -956,7 +920,6 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
     const s = sessionFor(current);
     $("dateLine").textContent = DOW[s.dow] + " · " + current.getDate() + " " + MONTHS[current.getMonth()] + " " + current.getFullYear() + " · Week " + s.wk + (keyOf(current) === todayKey() ? " · Today" : "");
     $("title").innerHTML = DOW[s.dow] + '<span class="split">' + ([liftLabel(s.liftType), cardioLabel(s.cardioType)].filter(Boolean).join(" + ") || "Rest day") + "</span>";
-    $("cue").textContent = s.cue;
     $("sugGrid").hidden = !s.lift && !s.cardio;
     $("sugGrid").classList.toggle("single", !s.lift || !s.cardio);
     renderSetup(); renderWeek(); renderLift(s); renderCardio(s); renderMine(); renderLibrary();
