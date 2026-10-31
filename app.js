@@ -127,6 +127,45 @@
   POOL.arms = POOL.biceps.concat(POOL.triceps);
   const findEx = name => { for (const k in POOL) { const e = POOL[k].find(x => x.name === name); if (e) return e; } return { name, cue: "" }; };
 
+  // Share-link dictionaries. APPEND ONLY: a link stores positions in these lists,
+  // so reordering or removing an entry would change what existing links mean.
+  const CATALOG = [
+    "Barbell Bench Press", "Incline Barbell Press", "Dumbbell Bench Press", "Incline Dumbbell Press", "Close-Grip Bench Press",
+    "Weighted Dips", "Machine Chest Press", "Standing Overhead Press", "Seated Dumbbell Shoulder Press", "Half-Kneeling Landmine Press",
+    "Arnold Press", "Push Press", "Barbell Bent-Over Row", "Chest-Supported Row", "Single-Arm Dumbbell Row",
+    "Seal Row", "Seated Cable Row", "Pendlay Row", "Pull-ups", "Chin-ups",
+    "Lat Pulldown", "Neutral-Grip Pulldown", "Weighted Pull-ups", "Back Squat", "Front Squat",
+    "Safety-Bar Squat", "Hack Squat", "Leg Press", "Goblet Squat", "Romanian Deadlift",
+    "Barbell Hip Thrust", "Good Morning", "Single-Leg Romanian Deadlift", "Trap-Bar Deadlift", "Conventional Deadlift",
+    "Sumo Deadlift", "Rack Pull (below knee)", "Bulgarian Split Squat", "Walking Lunge", "Reverse Lunge",
+    "Dumbbell Step-up", "Lateral Lunge", "Lying Leg Curl", "Seated Leg Curl", "Nordic Hamstring Curl",
+    "Stability-Ball Leg Curl", "Leg Extension", "Spanish Squat", "Cyclist Squat", "Standing Calf Raise",
+    "Seated Calf Raise", "Single-Leg Calf Raise", "Dumbbell Lateral Raise", "Cable Lateral Raise", "Lean-Away Lateral Raise",
+    "Machine Lateral Raise", "Face Pull", "Rear Delt Fly", "Reverse Pec Deck", "Band Pull-Apart",
+    "Cable Fly", "Dumbbell Fly", "Pec Deck", "Low-to-High Cable Fly", "Rope Triceps Pushdown",
+    "EZ-Bar Skull Crusher", "Overhead Cable Triceps Extension", "Dumbbell Kickback", "Bench Dips", "EZ-Bar Curl",
+    "Hammer Curl", "Incline Dumbbell Curl", "Preacher Curl", "Cable Curl", "Straight-Arm Pulldown",
+    "Dumbbell Pullover", "Dumbbell Shrug", "Barbell Shrug", "Hanging Leg Raise", "Ab Wheel Rollout",
+    "Pallof Press", "Dead Bug", "Cable Crunch", "Side Plank", "Farmer's Carry",
+    "Suitcase Carry", "Front-Rack Carry", "Push-ups", "Pike Push-up", "Diamond Push-up",
+    "Decline Push-up", "Archer Push-up", "Inverted Row", "Towel Row", "Bodyweight Squat",
+    "Jump Squat", "Pistol Squat to Box", "Skater Squat", "Single-Leg Glute Bridge", "Glute Bridge",
+    "Cat-Cow", "World's Greatest Stretch", "90/90 Hip Switches", "Thoracic Open Book", "Deep Squat Hold",
+    "Bird Dog", "Hanging from a Bar", "Couch Stretch", "Child's Pose Breathing", "Easy Run",
+    "Tempo Run", "Interval Run", "Long Run", "Hill Sprints", "Steady Row",
+    "Row Intervals", "2K Row", "Easy Ride", "Bike Intervals", "Climb Repeats",
+    "Easy Swim", "Swim Intervals", "Brisk Walk", "Incline Walk", "Hike",
+    "Ski Erg Intervals", "Elliptical", "Stair Climber", "Jump Rope"
+  ];
+  const TOKENS = [
+    "", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "18", "20", "25", "30",
+    "6–8", "8–10", "10–12", "12–15", "15–20", "6-8", "8-10", "10-12", "12-15", "15-20", "AMRAP", "—",
+    "30 s", "45 s", "60 s", "75 s", "90 s", "60–90 s", "2 min", "2–3 min", "3 min", "4 min", "5 min",
+    "10 min", "15 min", "20 min", "30 min", "45 min", "60 min", "90 min",
+    "5 / side", "8 / side", "10 / side", "8 / leg", "10 / leg", "20 s / side", "30 s / side", "40 m", "2000 m",
+    "6 × 3 min", "8 × 500 m", "10 × 100 m", "5 × 5 min", "10 × 15 s", "10 × 1 min", "8 × 1 min"
+  ];
+
   // Set and rep prescriptions by slot role
   const ROLES = {
     main: [{ s: 4, r: "5", rest: "3 min", rpe: 8 }, { s: 5, r: "5", rest: "3 min", rpe: 8 }, { s: 4, r: "6", rest: "2–3 min", rpe: 8 }, { s: 5, r: "3", rest: "3 min", rpe: 8 }],
@@ -494,8 +533,7 @@
       const ul = card.querySelector("ul");
       let n = 0;
       w.items.forEach((it, i) => {
-        const rx = (it.sets ? esc(it.sets) + " × " : "") + esc(it.reps || "");
-        const r = checkRow(key, "mine-" + w.id + "-" + i, esc(it.name), rx ? '<div class="rx">' + rx + "</div>" : "<span></span>", it.note ? esc(it.note) : "");
+        const r = checkRow(key, "mine-" + w.id + "-" + i, esc(it.name), rxHtml(it), cueText(it));
         if (r.done) n++; ul.appendChild(r.li);
       });
       card.querySelector(".progress i").style.width = (w.items.length ? n / w.items.length * 100 : 0) + "%";
@@ -616,6 +654,7 @@
     const n = ++rowSeq;
     const r = document.createElement("div");
     r.className = "brow";
+    r.extra = { weight: it.weight, rest: it.rest, rpe: it.rpe, ss: it.ss }; // Fields this dialog doesn't show
     r.innerHTML =
       '<input type="text" class="b-name" id="bn' + n + '" placeholder="Exercise" aria-label="Exercise name" value="' + esc(it.name) + '">' +
       '<input type="text" class="b-sets" id="bs' + n + '" placeholder="Sets" aria-label="Sets" inputmode="numeric" value="' + esc(it.sets) + '">' +
@@ -649,7 +688,8 @@
   $("bform").addEventListener("submit", e => {
     e.preventDefault();
     const name = $("bName").value.trim();
-    const items = [...$("bRows").querySelectorAll(".brow")].map(r => ({
+    const items = [...$("bRows").querySelectorAll(".brow")].map(r => cleanItem({
+      ...r.extra,
       name: r.querySelector(".b-name").value.trim(),
       sets: r.querySelector(".b-sets").value.trim(),
       reps: r.querySelector(".b-reps").value.trim(),
@@ -732,13 +772,19 @@
   // A plan travels in the link's #w= part, which browsers never send to a server.
   // Links come from outside, so everything read from one is treated as untrusted:
   // size-capped, stripped to plain fields, shown as text, and saved only on a click.
-  const MAX_CODE = 30000, MAX_ITEMS = 40;
+  const MAX_CODE = 12000, MAX_ITEMS = 40, MAX_WEEKS = 12;
   const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/, DONE_KEY = /^(lift|cardio|mine)-[\w-]{1,80}$/, ID_KEY = /^[\w-]{1,40}$/;
-  const b64enc = s => btoa(Array.from(new TextEncoder().encode(s), c => String.fromCharCode(c)).join("")).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  const b64dec = s => new TextDecoder("utf-8", { fatal: true }).decode(Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0)));
+  const b64enc = bytes => btoa(Array.from(bytes, c => String.fromCharCode(c)).join("")).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const b64dec = s => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
   // Removes control characters and the invisible marks that can disguise text direction
   const clip = (x, n) => (typeof x === "string" || typeof x === "number" ? String(x) : "").replace(/[\u0000-\u001f\u007f-\u009f‎‏‪-‮⁦-⁩]/g, " ").trim().slice(0, n);
-  const cleanItem = i => ({ name: clip(i.name, 100), sets: clip(i.sets, 20), reps: clip(i.reps, 40), note: clip(i.note, 300) });
+  const cleanItem = i => ({ name: clip(i.name, 100), sets: clip(i.sets, 20), reps: clip(i.reps, 40), weight: clip(i.weight, 30), rest: clip(i.rest, 20), rpe: clip(i.rpe, 10), note: clip(i.note, 300), ss: i.ss === true });
+  const rxHtml = i => {
+    const main = (i.sets ? esc(i.sets) + " × " : "") + esc(i.reps || "") + (i.weight ? " @ " + esc(i.weight) : "");
+    const sub = [i.rest ? "rest " + esc(i.rest) : "", i.rpe ? "RPE " + esc(i.rpe) : ""].filter(Boolean).join(" · ");
+    return main || sub ? '<div class="rx">' + main + (sub ? "<small>" + sub + "</small>" : "") + "</div>" : "<span></span>";
+  };
+  const cueText = i => esc([i.ss ? "Superset with the exercise above" : "", i.note].filter(Boolean).join(". "));
   const cleanType = t => TYPES.some(x => x.id === t) ? t : "other";
 
   function cleanWorkout(w) {
@@ -749,28 +795,88 @@
     return { id: typeof w.id === "string" && ID_KEY.test(w.id) ? w.id : uid(), name, type: cleanType(w.type), items, from: clip(w.from, 60), msg: clip(w.msg, 300) };
   }
 
-  // Format: [1, plan name, from, message, [[weekday or -1, workout name, type, [[name, sets, reps, note]]]]]
+  // Compact format: exercises and common values are stored as positions in CATALOG and
+  // TOKENS, numbers as variable-length bytes, and anything else as UTF-8 text.
+  // Layout: version, weeks, name, from, message, day count, then for each day:
+  // weekday+type byte, name, item count, and items (exercise, flags, sets, reps, optional fields).
+  const F_WEIGHT = 1, F_REST = 2, F_RPE = 4, F_NOTE = 8, F_SS = 16, LINK_VERSION = 2;
+
   function encodeShare(p) {
-    return b64enc(JSON.stringify([1, p.name, p.from, p.msg, p.days.map(d => [d.dow, d.name, d.type, d.items.map(i => [i.name, i.sets, i.reps, i.note])])]));
+    const out = [], text = new TextEncoder();
+    const num = n => { while (n > 127) { out.push((n & 127) | 128); n = Math.floor(n / 128); } out.push(n); };
+    const str = s => { const b = text.encode(s); num(b.length); b.forEach(x => out.push(x)); };
+    const tok = s => { const i = TOKENS.indexOf(s); if (i >= 0) num(i + 1); else { num(0); str(s); } };
+    out.push(LINK_VERSION);
+    num(p.weeks || 1);
+    str(p.name); str(p.from); str(p.msg);
+    num(p.days.length);
+    p.days.forEach(d => {
+      out.push((d.dow + 1) | (TYPES.findIndex(t => t.id === d.type) << 4));
+      str(d.name);
+      num(d.items.length);
+      d.items.forEach(i => {
+        const ex = CATALOG.indexOf(i.name);
+        num(ex + 1);
+        if (ex < 0) str(i.name);
+        out.push((i.weight ? F_WEIGHT : 0) | (i.rest ? F_REST : 0) | (i.rpe ? F_RPE : 0) | (i.note ? F_NOTE : 0) | (i.ss ? F_SS : 0));
+        tok(i.sets || ""); tok(i.reps || "");
+        if (i.weight) tok(i.weight);
+        if (i.rest) tok(i.rest);
+        if (i.rpe) tok(i.rpe);
+        if (i.note) str(i.note);
+      });
+    });
+    return b64enc(out);
   }
+
   function decodeShare(code) {
     if (code.length > MAX_CODE) return null;
     try {
-      const data = JSON.parse(b64dec(code));
-      if (!Array.isArray(data) || data[0] !== 1 || !Array.isArray(data[4])) return null;
+      const b = b64dec(code), text = new TextDecoder("utf-8", { fatal: true });
+      let pos = 0;
+      const byte = () => { if (pos >= b.length) throw new Error("short"); return b[pos++]; };
+      const num = () => {
+        let n = 0, scale = 1;
+        for (let i = 0; i < 4; i++) { const x = byte(); n += (x & 127) * scale; if (x < 128) return n; scale *= 128; }
+        throw new Error("long");
+      };
+      const str = () => {
+        const n = num();
+        if (pos + n > b.length) throw new Error("short");
+        const s = text.decode(b.subarray(pos, pos + n)); pos += n; return s;
+      };
+      const tok = () => { const i = num(); if (i === 0) return str(); if (i > TOKENS.length) throw new Error("token"); return TOKENS[i - 1]; };
+
+      if (byte() !== LINK_VERSION) return null;
+      const weeks = Math.min(Math.max(num(), 1), MAX_WEEKS);
+      const name = clip(str(), 100), from = clip(str(), 60), msg = clip(str(), 300);
+      const dayCount = num();
+      if (dayCount < 1 || dayCount > 7) return null;
       const seen = new Set(), planDays = [];
-      data[4].slice(0, 7).forEach(d => {
-        if (!Array.isArray(d) || !Array.isArray(d[3])) return;
-        const dow = d[0];
-        if (!Number.isInteger(dow) || dow < -1 || dow > 6 || seen.has(dow)) return;
-        const items = d[3].slice(0, MAX_ITEMS).filter(Array.isArray)
-          .map(i => cleanItem({ name: i[0], sets: i[1], reps: i[2], note: i[3] })).filter(i => i.name);
-        if (!items.length) return;
+      for (let k = 0; k < dayCount; k++) {
+        const head = byte(), dow = (head & 15) - 1, type = TYPES[head >> 4];
+        if (dow > 6 || seen.has(dow)) return null;
         seen.add(dow);
-        planDays.push({ dow, name: clip(d[1], 100), type: cleanType(d[2]), items });
-      });
-      if (!planDays.length) return null;
-      return { name: clip(data[1], 100) || "Shared plan", from: clip(data[2], 60), msg: clip(data[3], 300), days: planDays };
+        const dayName = clip(str(), 100), count = num();
+        if (count > MAX_ITEMS) return null;
+        const items = [];
+        for (let n = 0; n < count; n++) {
+          const ex = num();
+          if (ex > CATALOG.length) return null;
+          const exName = ex ? CATALOG[ex - 1] : str();
+          const flags = byte(), it = { name: exName, sets: tok(), reps: tok(), ss: !!(flags & F_SS) };
+          if (flags & F_WEIGHT) it.weight = tok();
+          if (flags & F_REST) it.rest = tok();
+          if (flags & F_RPE) it.rpe = tok();
+          if (flags & F_NOTE) it.note = str();
+          items.push(cleanItem(it));
+        }
+        const kept = items.filter(i => i.name);
+        if (kept.length) planDays.push({ dow, name: dayName, type: type ? type.id : "other", items: kept });
+      }
+      if (pos !== b.length || !planDays.length) return null;
+      const single = planDays.length === 1 && planDays[0].dow < 0;
+      return { name: name || (single && planDays[0].name) || "Training plan", from, msg, weeks: single ? 1 : weeks, days: planDays };
     } catch (e) { return null; }
   }
   const shareUrl = code => location.origin + location.pathname + "#w=" + code;
@@ -785,8 +891,8 @@
 
   function updateShareLink() {
     const w = sharing;
-    $("shLink").value = shareUrl(encodeShare({ name: w.name, from: $("shFrom").value.trim(), msg: $("shMsg").value.trim(),
-      days: [{ dow: -1, name: w.name, type: w.type, items: w.items }] }));
+    $("shLink").value = shareUrl(encodeShare({ name: "", from: clip($("shFrom").value, 60), msg: clip($("shMsg").value, 300),
+      days: [{ dow: -1, name: w.name, type: w.type, items: w.items.map(cleanItem) }] }));
   }
   function openShare(w) {
     sharing = w;
@@ -813,22 +919,28 @@
     if (window.top !== window.self) return; // Never prompt from inside another site's frame
     const p = decodeShare(m[1]);
     if (!p) { toast("That workout link is incomplete. Ask for a new one."); return; }
+    showPlan(p, false);
+  }
+
+  function showPlan(p, previewOnly) {
     incoming = p;
     const single = p.days.length === 1 && p.days[0].dow < 0;
-    $("rcFrom").textContent = p.from ? "From " + p.from : "Shared with you";
+    $("rcFrom").textContent = previewOnly ? "Preview" : p.from ? "From " + p.from : "Shared with you";
     $("rcTitle").textContent = p.name;
     $("rcMsg").textContent = p.msg;
     $("rcMsg").hidden = !p.msg;
     $("rcItems").innerHTML = p.days.map(d => {
       const t = typeOf(d.type);
       return '<li class="rc-day"><span class="tag" style="background:' + t.color + '">' + t.name + "</span>" + esc(d.dow >= 0 ? DOW[d.dow] : "") + (d.name ? (d.dow >= 0 ? " · " : "") + esc(d.name) : "") + "</li>" +
-        d.items.map(i => "<li><b>" + esc(i.name) + (i.note ? "<small>" + esc(i.note) + "</small>" : "") + "</b><span>" + (i.sets ? esc(i.sets) + " × " : "") + esc(i.reps) + "</span></li>").join("");
+        d.items.map(i => { const c = cueText(i); return "<li><b>" + esc(i.name) + (c ? "<small>" + c + "</small>" : "") + "</b>" + rxHtml(i) + "</li>"; }).join("");
     }).join("");
     const now = atNoon(new Date());
     const start = single ? current : atNoon(new Date(now.getTime() + ((7 - dowMon(now)) % 7) * DAY_MS));
     $("rcDate").value = keyOf(start);
-    $("rcDateLabel").textContent = single ? "Do it on" : "Start the week of";
-    $("rcDay").textContent = single ? "Add to this day" : "Add to this week";
+    $("rcDateLabel").textContent = single ? "Do it on" : p.weeks > 1 ? "Start the week of (repeats for " + p.weeks + " weeks)" : "Start the week of";
+    $("rcDay").textContent = single ? "Add to this day" : p.weeks > 1 ? "Add " + p.weeks + " weeks" : "Add to this week";
+    [$("rcDay"), $("rcLib"), $("rcDate").parentElement, $("rcTrust")].forEach(el => { el.hidden = previewOnly; });
+    $("rcSkip").textContent = previewOnly ? "Close" : "Not now";
     if (!recvDlg.open) recvDlg.showModal();
   }
 
@@ -853,8 +965,8 @@
     const picked = m ? new Date(+m[1], +m[2] - 1, +m[3], 12) : current;
     const monday = picked.getTime() - dowMon(picked) * DAY_MS;
     let first = null;
-    saved.forEach(s => {
-      const d = s.dow < 0 ? picked : atNoon(new Date(monday + s.dow * DAY_MS));
+    for (let week = 0; week < (incoming.weeks || 1); week++) saved.forEach(s => {
+      const d = s.dow < 0 ? picked : atNoon(new Date(monday + (week * 7 + s.dow) * DAY_MS));
       const k = keyOf(d);
       if (!(days[k] || []).includes(s.id)) days[k] = (days[k] || []).concat(s.id);
       if (!first || d < first) first = d;
@@ -883,8 +995,11 @@
     { id: "core", name: "Core", type: "core", list: fromPools(["core", "carry"]) },
     { id: "bw", name: "Bodyweight", list: fromPools(["bwpush", "bwpull", "bwlegs", "bwhinge"]) },
     { id: "cardio", name: "Cardio", type: "cardio", list: CARDIO_PICKS },
-    { id: "mobility", name: "Mobility", type: "mobility", list: LIFTS.recovery[0].ex.map(e => ({ name: e.name, cue: e.cue, sets: String(e.sets), reps: e.reps })) }
+    { id: "mobility", name: "Mobility", type: "mobility", list: [...new Map(LIFTS.recovery.flatMap(t => t.ex).map(e => [e.name, { name: e.name, cue: e.cue, sets: String(e.sets), reps: e.reps }])).values()] },
+    { id: "saved", name: "My workouts", list: [] }
   ];
+  const groupList = g => g.id === "saved" ? library.map(w => ({ name: w.name, cue: w.items.length + " exercises", type: w.type, items: w.items })) : g.list;
+  const newItem = (name, sets, reps) => cleanItem({ name, sets, reps });
 
   const emptyWeek = () => DOW.map(() => ({ name: "", type: "lifting", items: [] }));
   function loadDraft() {
@@ -894,13 +1009,19 @@
       if (!x || !Array.isArray(x.items)) return;
       week[i] = { name: clip(x.name, 100), type: cleanType(x.type), items: x.items.slice(0, MAX_ITEMS).filter(Boolean).map(cleanItem) };
     });
-    return { name: clip(d && d.name, 100), msg: clip(d && d.msg, 300), week };
+    const w = d && Number(d.weeks);
+    return { name: clip(d && d.name, 100), msg: clip(d && d.msg, 300), weeks: w >= 1 && w <= MAX_WEEKS ? w : 1, week };
   }
   let plan = loadDraft(), bDay = dowMon(new Date()), pickGroup = "chest", pickQuery = "";
   const saveDraft = () => store.set("draft", plan);
   const usedDays = () => plan.week.map((d, i) => ({ dow: i, name: d.name.trim(), type: d.type, items: d.items.filter(x => x.name.trim()) })).filter(d => d.items.length);
 
   function changed() { saveDraft(); $("bResult").hidden = true; renderBuildBar(); }
+
+  // One level of undo for actions that replace or remove work
+  let undoState = null;
+  function snapshot() { undoState = JSON.stringify(plan); $("bUndo").disabled = false; }
+  function syncPlanFields() { $("pName").value = plan.name; $("pMsg").value = plan.msg; $("pWeeks").value = String(plan.weeks); }
 
   function renderBuildWeek() {
     const wrap = $("bWeek"); wrap.innerHTML = "";
@@ -923,21 +1044,23 @@
     const q = pickQuery.toLowerCase();
     const seen = new Set();
     const list = (q ? PICK_GROUPS : PICK_GROUPS.filter(g => g.id === pickGroup))
-      .flatMap(g => g.list.map(e => Object.assign({ group: g }, e)))
+      .flatMap(g => groupList(g).map(e => Object.assign({ group: g }, e)))
       .filter(e => (!q || e.name.toLowerCase().includes(q)) && !seen.has(e.name) && seen.add(e.name));
     const day = plan.week[bDay];
     const ul = $("picks"); ul.innerHTML = "";
     if (!list.length) { ul.innerHTML = '<li class="hint">No match. Add it as your own exercise below.</li>'; return; }
     list.forEach(e => {
-      const on = day.items.some(x => x.name === e.name);
+      const on = !e.items && day.items.some(x => x.name === e.name);
       const li = document.createElement("li");
       li.innerHTML = '<button class="pick" aria-pressed="' + on + '"><span>' + esc(e.name) + "<small>" + esc(e.cue) + '</small></span><span class="add">' + (on ? "✓" : "+") + "</span></button>";
       li.firstChild.addEventListener("click", () => {
         if (on) day.items = day.items.filter(x => x.name !== e.name);
         else {
-          if (day.items.length >= MAX_ITEMS) { toast("A day can hold " + MAX_ITEMS + " exercises."); return; }
-          if (!day.items.length && e.group.type) day.type = e.group.type;
-          day.items.push({ name: e.name, sets: e.sets, reps: e.reps, note: "" });
+          const adding = e.items ? e.items.map(cleanItem) : [newItem(e.name, e.sets, e.reps)];
+          if (day.items.length + adding.length > MAX_ITEMS) { toast("A day can hold " + MAX_ITEMS + " exercises."); return; }
+          const type = e.type || e.group.type;
+          if (!day.items.length && type) day.type = type;
+          day.items.push(...adding);
         }
         changed(); renderBuild();
       });
@@ -952,25 +1075,51 @@
     $("dName").value = day.name;
     const tc = $("dTypes"); tc.innerHTML = "";
     TYPES.forEach(t => tc.appendChild(chip(t.name, day.type === t.id, t.color, () => { day.type = t.id; changed(); renderSheet(); })));
+    const cc = $("dCopy"); cc.innerHTML = "";
+    DOW.forEach((name, i) => {
+      if (i === bDay) return;
+      cc.appendChild(chip(name.slice(0, 3), false, null, () => {
+        if (!day.items.length) { toast("Add exercises before copying this day."); return; }
+        snapshot();
+        plan.week[i] = JSON.parse(JSON.stringify(day));
+        changed(); renderBuildWeek(); toast("Copied to " + name);
+      }));
+    });
     const rows = $("dRows"); rows.innerHTML = "";
     if (!day.items.length) { rows.innerHTML = '<p class="hint">Pick exercises from the list. Leave a day empty to make it a rest day.</p>'; return; }
     day.items.forEach((it, i) => {
       const r = document.createElement("div");
-      r.className = "brow has-move";
+      r.className = "xrow" + (it.ss ? " linked" : "");
       r.innerHTML =
-        '<input type="text" class="b-name" maxlength="100" aria-label="Exercise name">' +
-        '<input type="text" class="b-sets" maxlength="20" aria-label="Sets" placeholder="Sets">' +
-        '<input type="text" class="b-reps" maxlength="40" aria-label="Reps or time" placeholder="Reps / time">' +
-        '<input type="text" class="b-note" maxlength="300" aria-label="Notes" placeholder="Notes">' +
-        '<button class="x up" aria-label="Move up">↑</button><button class="x del" aria-label="Remove exercise">×</button>';
-      [["b-name", "name"], ["b-sets", "sets"], ["b-reps", "reps"], ["b-note", "note"]].forEach(([cls, key]) => {
-        const input = r.querySelector("." + cls);
-        input.value = it[key];
+        '<div class="xhead"><input type="text" class="binput f-name" maxlength="100" aria-label="Exercise name">' +
+        '<button class="x up" aria-label="Move up">↑</button><button class="x down" aria-label="Move down">↓</button>' +
+        '<button class="x dup" aria-label="Duplicate exercise">+</button><button class="x del" aria-label="Remove exercise">×</button></div>' +
+        '<div class="xfields">' +
+        '<label><span>Sets</span><input type="text" class="binput f-sets" maxlength="20" inputmode="numeric"></label>' +
+        '<label><span>Reps / time</span><input type="text" class="binput f-reps" maxlength="40" list="repsList"></label>' +
+        '<label><span>Weight</span><input type="text" class="binput f-weight" maxlength="30" placeholder="e.g. 60 kg"></label>' +
+        '<label><span>Rest</span><input type="text" class="binput f-rest" maxlength="20" list="restList"></label>' +
+        '<label><span>RPE</span><input type="text" class="binput f-rpe" maxlength="10" inputmode="decimal"></label></div>' +
+        '<div class="xfoot"><input type="text" class="binput f-note" maxlength="300" placeholder="Notes" aria-label="Notes">' +
+        '<label class="ss"><input type="checkbox" class="chk f-ss"> <span>Superset with above</span></label></div>';
+      ["name", "sets", "reps", "weight", "rest", "rpe", "note"].forEach(key => {
+        const input = r.querySelector(".f-" + key);
+        input.value = it[key] || "";
         input.addEventListener("input", () => { it[key] = input.value; changed(); });
       });
+      const ss = r.querySelector(".f-ss");
+      ss.checked = !!it.ss; ss.disabled = i === 0;
+      ss.addEventListener("change", () => { it.ss = ss.checked; r.classList.toggle("linked", ss.checked); changed(); });
+      const move = to => { [day.items[to], day.items[i]] = [day.items[i], day.items[to]]; changed(); renderSheet(); };
       r.querySelector(".up").disabled = i === 0;
-      r.querySelector(".up").addEventListener("click", () => { [day.items[i - 1], day.items[i]] = [day.items[i], day.items[i - 1]]; changed(); renderSheet(); });
-      r.querySelector(".del").addEventListener("click", () => { day.items.splice(i, 1); changed(); renderBuild(); });
+      r.querySelector(".down").disabled = i === day.items.length - 1;
+      r.querySelector(".up").addEventListener("click", () => move(i - 1));
+      r.querySelector(".down").addEventListener("click", () => move(i + 1));
+      r.querySelector(".dup").addEventListener("click", () => {
+        if (day.items.length >= MAX_ITEMS) { toast("A day can hold " + MAX_ITEMS + " exercises."); return; }
+        day.items.splice(i + 1, 0, { ...it, ss: false }); changed(); renderBuild();
+      });
+      r.querySelector(".del").addEventListener("click", () => { snapshot(); day.items.splice(i, 1); changed(); renderBuild(); });
       rows.appendChild(r);
     });
   }
@@ -978,19 +1127,34 @@
   function renderBuildBar() {
     const used = usedDays(), n = used.reduce((a, d) => a + d.items.length, 0);
     $("bSummary").textContent = n ? used.length + " day" + (used.length === 1 ? "" : "s") + " · " + n + " exercise" + (n === 1 ? "" : "s") : "Nothing added yet";
-    $("bShare").disabled = $("bSave").disabled = !n;
+    $("bShare").disabled = $("bSave").disabled = $("bPreview").disabled = $("bSend").disabled = !n;
+  }
+
+  function renderTemplates() {
+    const tc = $("bTemplates"); tc.innerHTML = "";
+    PROGRAMS.filter(p => p.week).forEach(p => tc.appendChild(chip(p.name, false, null, () => {
+      snapshot();
+      const seed = Date.now();
+      plan.week = p.week.map((t, i) => {
+        if (t === "rest") return emptyWeek()[0];
+        const s = buildLift(t, seed + "|" + i);
+        return { name: DAYTYPES[t].name, type: "lifting", items: s.ex.map(e => cleanItem({ name: e.name, sets: String(e.sets), reps: e.reps, rest: e.rest, rpe: String(e.rpe) })) };
+      });
+      if (!plan.name.trim()) plan.name = p.name;
+      syncPlanFields(); changed(); renderBuild(); toast("Started from " + p.name);
+    })));
   }
 
   function renderBuild() { renderBuildWeek(); renderPicker(); renderSheet(); renderBuildBar(); }
 
   function planForShare() {
-    return { name: clip(plan.name, 100) || "Training plan", from: clip(prefs.from, 60), msg: clip(plan.msg, 300),
+    return { name: clip(plan.name, 100), from: clip(prefs.from, 60), msg: clip(plan.msg, 300), weeks: plan.weeks,
       days: usedDays().map(d => ({ dow: d.dow, name: clip(d.name, 100), type: d.type, items: d.items.map(cleanItem).filter(i => i.name) })) };
   }
 
-  $("pName").value = plan.name;
+  syncPlanFields();
   $("pFrom").value = prefs.from || "";
-  $("pMsg").value = plan.msg;
+  $("pWeeks").addEventListener("change", e => { plan.weeks = Number(e.target.value); changed(); });
   $("pName").addEventListener("input", e => { plan.name = e.target.value; changed(); });
   $("pFrom").addEventListener("input", e => { prefs.from = e.target.value.trim(); savePrefs(); $("bResult").hidden = true; });
   $("pMsg").addEventListener("input", e => { plan.msg = e.target.value; changed(); });
@@ -1002,13 +1166,19 @@
     const name = clip($("ownName").value, 100), day = plan.week[bDay];
     if (!name) return;
     if (day.items.length >= MAX_ITEMS) { toast("A day can hold " + MAX_ITEMS + " exercises."); return; }
-    day.items.push({ name, sets: "3", reps: "10", note: "" });
+    day.items.push(newItem(name, "3", "10"));
     $("ownName").value = "";
     changed(); renderBuild();
   }
   $("ownAdd").addEventListener("click", addOwn);
   $("ownName").addEventListener("keydown", e => { if (e.key === "Enter") addOwn(); });
-  $("bClearDay").addEventListener("click", () => { plan.week[bDay] = emptyWeek()[0]; changed(); renderBuild(); });
+  $("bClearDay").addEventListener("click", () => { snapshot(); plan.week[bDay] = emptyWeek()[0]; changed(); renderBuild(); });
+  $("bUndo").addEventListener("click", () => {
+    if (!undoState) return;
+    plan = JSON.parse(undoState); undoState = null;
+    $("bUndo").disabled = true;
+    syncPlanFields(); changed(); renderBuild(); toast("Undone");
+  });
 
   $("bReset").addEventListener("click", e => {
     const b = e.target;
@@ -1018,21 +1188,32 @@
       return;
     }
     b.classList.remove("armed"); b.textContent = "Start over";
-    plan = { name: "", msg: "", week: emptyWeek() };
-    $("pName").value = ""; $("pMsg").value = "";
-    changed(); renderBuild();
+    snapshot();
+    plan = { name: "", msg: "", weeks: 1, week: emptyWeek() };
+    syncPlanFields(); changed(); renderBuild();
   });
 
-  $("bShare").addEventListener("click", () => {
+  function makeLink() {
     const code = encodeShare(planForShare());
-    if (code.length > MAX_CODE) { toast("This plan is too long for one link. Shorten the notes."); return; }
-    $("bLink").value = shareUrl(code);
+    if (code.length > MAX_CODE) { toast("This plan is too long for one link. Shorten the notes."); return false; }
+    const link = shareUrl(code);
+    $("bLink").value = link;
+    $("bLinkNote").textContent = link.length + " characters. Anyone with this link can see the plan. Later edits won't update it, so send a new link after changes.";
     $("bResult").hidden = false;
-    copyLink($("bLink"));
+    return true;
+  }
+  $("bShare").addEventListener("click", () => { if (makeLink()) copyLink($("bLink")); });
+  $("bSend").hidden = typeof navigator.share !== "function";
+  $("bSend").addEventListener("click", () => {
+    if (makeLink()) navigator.share({ title: clip(plan.name, 100) || "Training plan", url: $("bLink").value }).catch(() => {});
+  });
+  $("bPreview").addEventListener("click", () => {
+    const p = planForShare();
+    showPlan(Object.assign(p, { name: p.name || "Training plan" }), true);
   });
   $("bSave").addEventListener("click", () => {
     const p = planForShare();
-    incoming = p;
+    incoming = Object.assign(p, { name: p.name || "Training plan" });
     saveIncoming(); saveLib(); render();
     toast("Saved to your library");
   });
@@ -1067,6 +1248,7 @@
   });
 
   render();
+  renderTemplates();
   renderBuild();
   checkShareLink();
   routeView();

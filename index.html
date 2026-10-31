@@ -190,7 +190,8 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
 .rc-list li:first-child { border-top: 0; }
 .rc-list b { font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
 .rc-list small { display: block; font-weight: 400; font-size: 13px; color: var(--muted); }
-.rc-list span { font: 700 14px/1.4 var(--mono); white-space: nowrap; }
+.rc-list .rx { font: 700 14px/1.4 var(--mono); text-align: right; white-space: nowrap; }
+.rc-list .rx small { font: 500 11.5px/1.3 var(--mono); }
 .bform input[type=date] { font: 500 15px/1.3 var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px; width: 100%; min-width: 0; }
 .bform { display: grid; gap: 16px; padding: 22px; }
 .bform h2 { font: 800 30px/1 var(--display); text-transform: uppercase; margin: 0; }
@@ -244,7 +245,22 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
 .pick[aria-pressed="true"] { border-color: var(--accent); }
 .pick[aria-pressed="true"] .add { color: var(--accent); }
 .own { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; }
-.brow.has-move { grid-template-columns: minmax(0,2.2fr) 64px minmax(0,1.1fr) minmax(0,1.6fr) 34px 34px; }
+.field.wide { grid-column: 1 / -1; }
+.btn:disabled { opacity: 0.45; cursor: default; border-color: var(--line); }
+.xrow { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+.xrow.linked { border-left: 3px solid var(--accent); }
+.xhead { display: grid; grid-template-columns: minmax(0,1fr) repeat(4, 34px); gap: 6px; }
+.xhead .x { appearance: none; border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 6px; cursor: pointer; font-size: 16px; line-height: 1; }
+.xhead .x:hover:not(:disabled) { color: var(--ink); border-color: var(--ink); }
+.xhead .x:disabled { opacity: 0.35; cursor: default; }
+.xhead .x:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.xfields { display: grid; grid-template-columns: 0.7fr 1.2fr 1.2fr 1fr 0.7fr; gap: 6px; }
+.xfields label { display: grid; gap: 3px; min-width: 0; }
+.xfields span { font-size: 11px; font-weight: 600; color: var(--muted); }
+.xfields .binput, .xfoot .binput, .xhead .binput { padding: 7px 8px; font-size: 14px; }
+.xfoot { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 10px; align-items: center; }
+.ss { display: inline-flex; gap: 6px; align-items: center; font-size: 12.5px; color: var(--muted); }
+.ss .chk:disabled { opacity: 0.4; cursor: default; }
 .sharebar {
   position: sticky; bottom: env(safe-area-inset-bottom, 0px); z-index: 5; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
   background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-weight: 600;
@@ -254,11 +270,12 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
 .rc-day .tag { margin-right: 8px; }
 
 @media (max-width: 600px) {
-  .brow.has-move {
-    grid-template-columns: 64px minmax(0,1fr) 34px 34px;
-    grid-template-areas: "name name up x" "sets reps reps reps" "note note note note";
-  }
-  .brow .x.up { grid-area: up; }
+  .sharebar { position: static; }
+  .xhead { grid-template-columns: repeat(4, 1fr); }
+  .xhead .binput { grid-column: 1 / -1; }
+  .xhead .x { height: 34px; }
+  .xfields { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .xfoot { grid-template-columns: minmax(0,1fr); }
 }
 
 @media (max-width: 600px) {
@@ -382,7 +399,7 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
     <div class="sec-head">
       <div>
         <div class="label">Build a plan</div>
-        <h2 class="sec">Pick days, pick exercises, share</h2>
+        <h2 class="sec">Plan builder</h2>
       </div>
       <button class="btn small ghost danger" id="bReset">Start over</button>
     </div>
@@ -391,6 +408,11 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
       <label class="field"><span>Plan name</span><input type="text" id="pName" maxlength="100" placeholder="e.g. Week 1 strength" autocomplete="off"></label>
       <label class="field"><span>From (optional)</span><input type="text" id="pFrom" maxlength="60" placeholder="Your name" autocomplete="off"></label>
       <label class="field"><span>Message (optional)</span><input type="text" id="pMsg" maxlength="300" placeholder="e.g. Rest 2 minutes between big lifts" autocomplete="off"></label>
+      <label class="field"><span>Repeat</span><select class="binput" id="pWeeks">
+        <option value="1">1 week</option><option value="2">2 weeks</option><option value="3">3 weeks</option><option value="4">4 weeks</option>
+        <option value="6">6 weeks</option><option value="8">8 weeks</option><option value="12">12 weeks</option>
+      </select></label>
+      <div class="field wide"><span>Start from a template</span><div class="chips small" id="bTemplates" role="group" aria-label="Start from a template"></div></div>
     </section>
 
     <nav class="week" id="bWeek" aria-label="Days in this plan"></nav>
@@ -420,14 +442,20 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
         </div>
         <label class="field"><span>Workout name (optional)</span><input type="text" class="binput" id="dName" maxlength="100" placeholder="e.g. Heavy legs" autocomplete="off"></label>
         <div class="field"><span>Type</span><div class="chips small" id="dTypes" role="group" aria-label="Workout type"></div></div>
+        <div class="field"><span>Copy this day to</span><div class="chips small" id="dCopy" role="group" aria-label="Copy this day to"></div></div>
         <div class="rows" id="dRows"></div>
+        <datalist id="repsList"><option value="5"><option value="8"><option value="10"><option value="12"><option value="15"><option value="8–10"><option value="10–12"><option value="AMRAP"><option value="30 s"><option value="60 s"><option value="30 min"></datalist>
+        <datalist id="restList"><option value="30 s"><option value="45 s"><option value="60 s"><option value="90 s"><option value="2 min"><option value="3 min"></datalist>
       </article>
     </section>
 
     <section class="sharebar" aria-label="Share this plan">
       <span id="bSummary">Nothing added yet</span>
       <div class="acts">
+        <button class="btn ghost" id="bUndo" disabled>Undo</button>
+        <button class="btn" id="bPreview">Preview</button>
         <button class="btn" id="bSave">Save to my library</button>
+        <button class="btn" id="bSend" hidden>Send</button>
         <button class="btn primary" id="bShare">Copy share link</button>
       </div>
     </section>
@@ -496,7 +524,7 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
     <p class="from-note" id="rcMsg" hidden></p>
     <ul class="rc-list" id="rcItems"></ul>
     <label class="field"><span id="rcDateLabel">Do it on</span><input type="date" id="rcDate"></label>
-    <p class="hint">Sender names aren't verified. Only add plans from people you trust.</p>
+    <p class="hint" id="rcTrust">Sender names aren't verified. Only add plans from people you trust.</p>
     <div class="bfoot">
       <button type="button" class="btn ghost" id="rcSkip">Not now</button>
       <div class="acts">

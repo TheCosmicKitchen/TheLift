@@ -11,13 +11,19 @@ A daily training page: a lifting session and a cardio workout for every day, plu
 - **Change any day:** switch one day to a different session (Pull instead of Push, Sprints instead of Tempo), or press Swap for a fresh version of the same session.
 - **Checkmarks:** tick off each exercise or interval and watch the progress bar fill.
 - **Your own workouts:** build workouts under Lifting, Cardio, HIIT, Mobility, Core or Other, save them to a library, and add them to any day. Customize turns a suggested session into an editable copy.
-- **Build page:** pick days and exercises from a searchable list, set sets, reps and notes, then copy a share link in one click. Open it at https://thecosmickitchen.github.io/TheLift/#build.
-- **Share links:** send a full week or a single saved workout. Whoever opens the link sees a preview and chooses when to add it. No accounts, and the plan travels inside the link.
+- **Plan builder:** pick exercises from a searchable list of 129, add your own, and set sets, reps, weight, rest, RPE and notes. Group supersets, reorder, duplicate, copy a day to another day, start from a split template, repeat a plan for up to 12 weeks, preview it, and undo mistakes. Open it at https://thecosmickitchen.github.io/TheLift/#build.
+- **Share links:** copy a link in one click and send a full plan or a single saved workout. Whoever opens the link sees a preview and chooses when to add it. No accounts, and the plan travels inside the link.
 - **Backup:** workouts and checkmarks are saved in your browser. Export a backup file to move them to another device, then import it there.
 
 ## How it's built
 
 `index.html` and `app.js`, with no build step and no dependencies apart from Google Fonts. Host them anywhere static. Serve them over http(s), because the page only runs scripts from its own site.
+
+## Compact links
+
+The plan is stored inside the link, so there is no shortener or database. Links use a small binary format: known exercises and common values such as `3` or `90 s` become positions in fixed lists, and only custom text is spelled out. A six-day plan with 36 exercises comes to about 450 characters.
+
+`CATALOG` and `TOKENS` in `app.js` are append-only. Add new entries at the end, and never reorder or remove any, or existing links will change meaning.
 
 ## Share link safety
 
