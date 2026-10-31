@@ -14,7 +14,11 @@ A daily training page: a lifting session and a cardio workout for every day, plu
 - **Plan builder:** pick exercises from a searchable list of 280, add your own, and set sets, reps, weight, rest, RPE and notes. Group supersets, reorder, duplicate, copy a day to another day, start from a split template, repeat a plan for up to 12 weeks, preview it, and undo mistakes. Open it at https://thecosmickitchen.github.io/TheLift/#build.
 - **Program starters:** load a simplified version of a proven program, such as Couch to 5K, 5/3/1, PHUL or a sweet spot cycling base, then edit it and share it. Programs live in `presets.js`.
 - **Share links:** copy a link in one click and send a full plan or a single saved workout. Whoever opens the link sees a preview and chooses when to add it. No accounts, and the plan travels inside the link.
-- **Backup:** workouts and checkmarks are saved in your browser. Export a backup file to move them to another device, then import it there.
+- **Logging:** press Log on any exercise to record weight and reps set by set, with last time shown.
+- **Following plans:** open a plan link and press Follow. Everyone following the same link logs their own results in their own file. A newer link for the same plan updates it, and logs stay.
+- **Share page:** poster-style cards for your plan, followed plans and saved workouts, plus a season card you can copy as text. Each person keeps their own copy.
+- **Seasons and PRs:** the Progress page shows sessions, volume, personal records and history, for all time or one season.
+- **Save file:** where the browser supports it, TheLift auto-saves to a file you choose, so clearing browser data can't erase your logs. Open that file to restore everything. Other browsers use Export backup.
 
 ## How it's built
 
@@ -32,8 +36,8 @@ Share links are treated as untrusted input:
 
 - **No code runs from a link.** Link contents are shown only as plain text, and a Content Security Policy blocks inline and injected scripts.
 - **Nothing is saved without a click.** A link opens a preview first, and it can only add new entries. It cannot change or delete existing workouts.
-- **No data leaves the page.** The site makes no data requests, and the part of the link holding the plan is never sent to a server.
-- **Size limits apply.** Oversized or malformed links are rejected, and every field has a length limit. Backup imports are cleaned the same way.
+- **No data leaves the page.** The site makes no data requests, and the part of the link holding the plan is never sent to a server. Save files stay wherever you put them.
+- **Size limits apply.** Oversized or malformed links are rejected, and every field has a length limit. Backup imports and save files are cleaned the same way.
 
 Three limits to keep in mind: sender names are not verified, anyone with a link can read that plan, and a link cannot be cancelled once sent. Keep private details out of plan names and notes.
 

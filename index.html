@@ -246,6 +246,49 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
 .pick[aria-pressed="true"] .add { color: var(--accent); }
 .own { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; }
 .field.wide { grid-column: 1 / -1; }
+.share-hero h2 { font: 800 clamp(34px, 6.5vw, 62px)/0.95 var(--display); text-transform: uppercase; margin: 6px 0 8px; text-wrap: balance; }
+.share-hero p { margin: 0; max-width: 58ch; color: var(--muted); }
+.share-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 16px; align-items: start; }
+@media (max-width: 860px) { .share-grid { grid-template-columns: minmax(0, 1fr); } }
+.share-plans { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); gap: 14px; min-width: 0; }
+.poster { background: var(--ink); color: var(--bg); border-radius: 12px; padding: 18px; display: grid; gap: 12px; min-width: 0; align-content: start; }
+.poster .label { color: var(--bg); opacity: 0.7; }
+.poster h3 { font: 800 30px/1 var(--display); text-transform: uppercase; margin: 0; overflow-wrap: anywhere; }
+.poster p { margin: 0; font-size: 13.5px; opacity: 0.8; overflow-wrap: anywhere; }
+.poster.season { border-top: 6px solid var(--accent); }
+.poster-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.poster-day { border-radius: 5px; padding: 6px 2px; display: grid; gap: 2px; justify-items: center; color: #fff; min-width: 0; }
+.poster-day.off { background: transparent; box-shadow: inset 0 0 0 1px currentColor; color: var(--bg); opacity: 0.35; }
+.poster-day span { font: 700 10.5px/1 var(--body); }
+.poster-day b { font: 800 19px/1 var(--display); }
+.poster-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.poster-btn { background: var(--bg); color: var(--ink); border-color: var(--bg); }
+.poster-btn:hover { border-color: var(--accent); }
+.poster-btn.alt { background: transparent; color: var(--bg); }
+.poster-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.poster-stats div { display: grid; gap: 2px; min-width: 0; }
+.poster-stats b { font: 800 clamp(22px, 3vw, 30px)/1 var(--display); overflow-wrap: anywhere; }
+.poster-stats span { font-size: 11.5px; opacity: 0.75; }
+.poster-bests { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13.5px; }
+.poster-bests li { display: flex; justify-content: space-between; gap: 10px; }
+.poster-bests span { min-width: 0; overflow-wrap: anywhere; }
+.poster-bests b { font: 700 13px/1.4 var(--mono); white-space: nowrap; }
+.savebar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 8px; padding: 10px 12px; background: var(--surface); }
+.savebar.card-like { border-left-width: 1px; }
+.savebar .acts { display: flex; gap: 6px; flex-wrap: wrap; }
+.logline { grid-column: 2 / 4; display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--muted); padding-top: 2px; }
+.logline.logged span { color: var(--ink); font-weight: 600; }
+.lset { display: grid; grid-template-columns: 22px minmax(0,1fr) minmax(0,1fr) 34px; gap: 8px; align-items: end; }
+.lset label { display: grid; gap: 3px; min-width: 0; }
+.lset label span { font-size: 11px; font-weight: 600; color: var(--muted); }
+.lset .lnum { font: 700 14px/38px var(--mono); color: var(--muted); }
+.lset .x { appearance: none; height: 38px; border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 6px; cursor: pointer; font-size: 18px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 4px; }
+.stat b { font: 800 30px/1 var(--display); }
+.seasoninfo { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.seasoninfo:empty { display: none; }
+#prList span, #logList span { font: 700 13px/1.4 var(--mono); text-align: right; }
 .presets { display: grid; gap: 12px; }
 .lib-card .credit { font-size: 12px; }
 .btn:disabled { opacity: 0.45; cursor: default; border-color: var(--line); }
@@ -273,6 +316,9 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
 
 @media (max-width: 600px) {
   .sharebar { position: static; }
+  .tabs { gap: 2px; }
+  .tabs .brand { margin-right: 6px; font-size: 19px; }
+  .tabs a { padding: 7px 9px; font-size: 13px; }
   .xhead { grid-template-columns: repeat(4, 1fr); }
   .xhead .binput { grid-column: 1 / -1; }
   .xhead .x { height: 34px; }
@@ -306,7 +352,11 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
     <span class="brand">TheLift</span>
     <a href="#" id="tabToday">Today</a>
     <a href="#build" id="tabBuild">Build</a>
+    <a href="#progress" id="tabProgress">Progress</a>
+    <a href="#share" id="tabShare">Share</a>
   </nav>
+
+  <div class="savebar" id="saveBar" role="status" hidden></div>
 
   <div class="view" id="viewToday">
   <header class="mast">
@@ -353,6 +403,7 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
           <h2 id="cardioName">Cardio</h2>
         </div>
         <div class="card-actions">
+          <button class="btn small" id="logCardio">Log</button>
           <button class="btn small" id="swapCardio" title="Show a different session for this day">Swap</button>
           <button class="btn small" id="custCardio" title="Open this session in the builder to edit and save">Customize</button>
         </div>
@@ -395,6 +446,63 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
 
 
   <p class="foot">Suggested sessions rotate by weekday and week, so every day has its own card. RPE is effort out of 10 (RPE 8 = about two reps left in the tank). Heart-rate zones use % of your max heart rate. Scale everything to how you feel today.</p>
+  </div>
+
+  <div class="view" id="viewShare" hidden>
+    <header class="share-hero">
+      <div class="label">Share</div>
+      <h2>One link. Everyone keeps their own copy.</h2>
+      <p>Send a plan and each person follows it on their own device. Their logs stay in their own save file.</p>
+    </header>
+    <div class="field" id="shareResult" hidden>
+      <span>Copied</span>
+      <input type="text" class="binput" id="shareLink" readonly aria-label="Share link">
+    </div>
+    <section class="share-grid">
+      <article class="poster season" id="seasonCard"></article>
+      <div class="share-plans" id="sharePlans"></div>
+    </section>
+  </div>
+
+  <div class="view" id="viewProgress" hidden>
+    <div class="sec-head">
+      <div>
+        <div class="label">Your training</div>
+        <h2 class="sec">Progress</h2>
+      </div>
+      <div class="chips small" id="seasonChips" role="group" aria-label="Choose a season"></div>
+    </div>
+    <div id="seasonInfo" class="seasoninfo"></div>
+    <div class="stats" id="stats"></div>
+
+    <section class="bgrid">
+      <article class="card">
+        <div><div class="label">Best lifts</div><h2 class="sec">Personal records</h2></div>
+        <ul class="rc-list" id="prList"></ul>
+      </article>
+      <article class="card">
+        <div><div class="label">History</div><h2 class="sec">Logged sessions</h2></div>
+        <ul class="rc-list" id="logList"></ul>
+      </article>
+    </section>
+
+    <section class="setup bplan" aria-label="Start a season">
+      <div class="field wide"><span>Start a season</span></div>
+      <label class="field"><span>Name</span><input type="text" id="seasonName" maxlength="60" placeholder="e.g. Winter bulk" autocomplete="off"></label>
+      <label class="field"><span>Start date</span><input type="date" class="binput" id="seasonStart"></label>
+      <label class="field"><span>Goal (optional)</span><input type="text" id="seasonGoal" maxlength="200" placeholder="e.g. 315 lb squat" autocomplete="off"></label>
+      <div class="field wide"><div><button class="btn primary" id="seasonAdd">Start season</button></div></div>
+    </section>
+
+    <section class="presets">
+      <div><div class="label">Following</div><h2 class="sec">Plans you follow</h2></div>
+      <div class="lib" id="planList"></div>
+    </section>
+
+    <section class="presets">
+      <div><div class="label">Your data</div><h2 class="sec">Save file</h2></div>
+      <div class="savebar card-like" id="saveCard" role="status"></div>
+    </section>
   </div>
 
   <div class="view" id="viewBuild" hidden>
@@ -537,12 +645,39 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
     <p class="from-note" id="rcMsg" hidden></p>
     <ul class="rc-list" id="rcItems"></ul>
     <label class="field"><span id="rcDateLabel">Do it on</span><input type="date" id="rcDate"></label>
+    <p class="from-note" id="rcFollowing" hidden></p>
     <p class="hint" id="rcTrust">Sender names aren't verified. Only add plans from people you trust.</p>
     <div class="bfoot">
       <button type="button" class="btn ghost" id="rcSkip">Not now</button>
       <div class="acts">
         <button type="button" class="btn" id="rcLib">Save to library</button>
         <button type="button" class="btn primary" id="rcDay">Add to this day</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="logDlg" aria-labelledby="lTitle">
+  <div class="bform">
+    <div class="card-head">
+      <div>
+        <div class="label">Log</div>
+        <h2 id="lTitle">Exercise</h2>
+      </div>
+      <div class="chips small" role="group" aria-label="Weight unit">
+        <button type="button" class="chip" id="lUnitlb">lb</button>
+        <button type="button" class="chip" id="lUnitkg">kg</button>
+      </div>
+    </div>
+    <p class="hint" id="lLast"></p>
+    <div class="rows" id="lSets"></div>
+    <div><button type="button" class="btn small" id="lAddSet">+ Add set</button></div>
+    <label class="field"><span>Note (optional)</span><input type="text" class="binput" id="lNote" maxlength="300" autocomplete="off"></label>
+    <div class="bfoot">
+      <button type="button" class="btn ghost danger" id="lDelete" hidden>Delete log</button>
+      <div class="acts">
+        <button type="button" class="btn" id="lCancel">Cancel</button>
+        <button type="button" class="btn primary" id="lSave">Save</button>
       </div>
     </div>
   </div>

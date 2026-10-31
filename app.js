@@ -289,9 +289,15 @@
 
   // ---------- Storage ----------
   const PREFIX = "dtc.";
+  let appReady = false;
   const store = {
     get(k, f) { try { const v = localStorage.getItem(PREFIX + k); return v ? JSON.parse(v) : f; } catch (e) { return f; } },
-    set(k, v) { try { localStorage.setItem(PREFIX + k, JSON.stringify(v)); } catch (e) {} }
+    // For bookkeeping values that shouldn't count as a change to your data
+    mark(k, v) { try { localStorage.setItem(PREFIX + k, JSON.stringify(v)); } catch (e) {} },
+    set(k, v) {
+      store.mark(k, v);
+      if (appReady) { store.mark("updated", Date.now()); scheduleSave(); }
+    }
   };
   let library = store.get("library", null);
   if (!Array.isArray(library)) { library = EXAMPLES.map(w => JSON.parse(JSON.stringify(w))); store.set("library", library); }
@@ -401,7 +407,7 @@
   const fmtMin = m => m >= 1 ? (Math.round(m * 10) / 10) + " min" : Math.round(m * 60) + " s";
   const isDone = (key, id) => !!store.get("done:" + key, {})[id];
 
-  function checkRow(key, id, nameHtml, rightHtml, cueHtml) {
+  function checkRow(key, id, nameHtml, rightHtml, cueHtml, log) {
     const done = isDone(key, id);
     const li = document.createElement("li");
     li.className = "item" + (done ? " done" : "");
@@ -411,6 +417,7 @@
       '<label class="name" for="' + domId + '">' + nameHtml + '</label>' + rightHtml +
       (cueHtml ? '<div class="cue">' + cueHtml + "</div>" : "");
     li.querySelector("input").addEventListener("change", ev => toggle(key, id, ev.target.checked));
+    if (log) li.appendChild(logLine(key, log));
     return { li, done };
   }
 
@@ -421,7 +428,7 @@
     for (let i = 0; i < 7; i++) {
       const d = atNoon(new Date(start.getTime() + i * DAY_MS));
       const k = keyOf(d);
-      const mine = (days[k] || []).map(id => library.find(w => w.id === id)).filter(Boolean);
+      const mine = (days[k] || []).map(id => library.find(w => w.id === id)).filter(Boolean).concat(subsForDate(d).map(e => e.day));
       const b = document.createElement("button");
       b.className = "day" + (k === keyOf(current) ? " sel" : "") + (k === tk ? " today" : "");
       const lt = liftTypeFor(d), ct = cardioTypeFor(d);
@@ -452,7 +459,8 @@
     let n = 0;
     ex.forEach((e, i) => {
       const r = checkRow(s.key, "lift-" + i, esc(e.name),
-        '<div class="rx">' + e.sets + " × " + esc(e.reps) + "<small>rest " + esc(e.rest) + (e.rpe >= 5 ? " · RPE " + e.rpe : "") + "</small></div>", esc(e.cue));
+        '<div class="rx">' + e.sets + " × " + esc(e.reps) + "<small>rest " + esc(e.rest) + (e.rpe >= 5 ? " · RPE " + e.rpe : "") + "</small></div>", esc(e.cue),
+        { ex: e.name, sets: e.sets, reps: e.reps, done: "lift-" + i });
       if (r.done) n++; ul.appendChild(r.li);
     });
     $("liftProg").style.width = (n / ex.length * 100) + "%";
@@ -542,7 +550,9 @@
     $("mineTitle").textContent = "Planned for " + (isToday ? "today" : DOW[dowMon(current)] + " " + current.getDate() + " " + MONTHS[current.getMonth()].slice(0, 3));
     const list = $("dayList"); list.innerHTML = "";
     const ids = (days[key] || []).filter(id => library.some(w => w.id === id));
-    if (!ids.length) {
+    const following = subsForDate(current);
+    following.forEach(e => list.appendChild(subCard(e, key)));
+    if (!ids.length && !following.length) {
       const e = document.createElement("div");
       e.className = "empty";
       e.innerHTML = "<p>Nothing of your own planned for this day. Build a workout, or add one from your library below.</p>";
@@ -565,7 +575,8 @@
       const ul = card.querySelector("ul");
       let n = 0;
       w.items.forEach((it, i) => {
-        const r = checkRow(key, "mine-" + w.id + "-" + i, esc(it.name), rxHtml(it), cueText(it));
+        const r = checkRow(key, "mine-" + w.id + "-" + i, esc(it.name), rxHtml(it), cueText(it),
+          { ex: it.name, sets: it.sets, reps: it.reps, weight: it.weight, done: "mine-" + w.id + "-" + i });
         if (r.done) n++; ul.appendChild(r.li);
       });
       card.querySelector(".progress i").style.width = (w.items.length ? n / w.items.length * 100 : 0) + "%";
@@ -629,6 +640,7 @@
           return;
         }
         library = library.filter(x => x.id !== w.id);
+        markGone(w.id);
         Object.keys(days).forEach(k => { days[k] = days[k].filter(x => x !== w.id); if (!days[k].length) delete days[k]; });
         saveLib(); saveDays(); render(); toast("Deleted " + w.name);
       });
@@ -752,6 +764,12 @@
     openBuilder(null, { name: s.lift.name, type: s.liftType === "rest" ? "mobility" : "lifting",
       items: s.lift.ex.map(e => ({ name: e.name, sets: String(e.sets), reps: e.reps, note: "Rest " + e.rest + (e.rpe >= 5 ? ", RPE " + e.rpe : "") })) });
   });
+  $("logCardio").addEventListener("click", () => {
+    const s = sessionFor(current);
+    if (!s.cardio) return;
+    const mins = Math.round(s.cardio.segs.reduce((a, x) => a + x.min, 0));
+    openLog(keyOf(current), { ex: s.mode.name + " · " + SESS[s.cardioType], sets: 1, reps: mins + " min" });
+  });
   $("custCardio").addEventListener("click", () => {
     const s = sessionFor(current);
     if (!s.cardio) return;
@@ -762,18 +780,13 @@
 
   // ---------- Backup ----------
   $("exportBtn").addEventListener("click", () => {
-    const data = { app: "daily-training-card", version: 1, exported: new Date().toISOString(), library, days, done: {} };
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k.startsWith(PREFIX + "done:")) data.done[k.slice(PREFIX.length + 5)] = JSON.parse(localStorage.getItem(k));
-      }
-    } catch (e) {}
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(dump(), null, 2)], { type: "application/json" });
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob); a.download = "training-backup-" + todayKey() + ".json";
+    a.href = URL.createObjectURL(blob); a.download = "thelift-backup-" + todayKey() + ".json";
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    store.mark("lastBackup", Date.now());
+    renderSaveBar();
   });
   $("importBtn").addEventListener("click", () => $("importFile").click());
   $("importFile").addEventListener("change", e => {
@@ -782,18 +795,9 @@
     rd.onload = () => {
       try {
         const d = JSON.parse(rd.result);
-        if (!Array.isArray(d.library)) throw new Error("bad");
-        d.library.forEach(w => { const c = cleanWorkout(w); if (c && !library.some(x => x.id === c.id)) library.push(c); });
-        Object.entries(d.days || {}).forEach(([k, ids]) => {
-          if (DATE_KEY.test(k) && Array.isArray(ids)) days[k] = [...new Set((days[k] || []).concat(ids.filter(i => typeof i === "string")))];
-        });
-        Object.entries(d.done || {}).forEach(([k, v]) => {
-          if (!DATE_KEY.test(k) || !v || typeof v !== "object") return;
-          const done = store.get("done:" + k, {});
-          Object.keys(v).forEach(id => { if (DONE_KEY.test(id)) done[id] = true; });
-          store.set("done:" + k, done);
-        });
-        saveLib(); saveDays(); render(); toast("Imported " + d.library.length + " workouts");
+        if (!Array.isArray(d.library) && !Array.isArray(d.logs)) throw new Error("bad");
+        mergeData(d); render(); renderBuild(); renderProgress(); renderSaveBar();
+        toast("Backup imported");
       } catch (err) { toast("That file isn't a training backup. Choose a .json file made with Export backup."); }
       e.target.value = "";
     };
@@ -829,9 +833,9 @@
 
   // Compact format: exercises and common values are stored as positions in CATALOG and
   // TOKENS, numbers as variable-length bytes, and anything else as UTF-8 text.
-  // Layout: version, weeks, name, from, message, day count, then for each day:
+  // Layout: version, plan ID, revision, weeks, name, from, message, day count, then for each day:
   // weekday+type byte, name, item count, and items (exercise, flags, sets, reps, optional fields).
-  const F_WEIGHT = 1, F_REST = 2, F_RPE = 4, F_NOTE = 8, F_SS = 16, LINK_VERSION = 2;
+  const F_WEIGHT = 1, F_REST = 2, F_RPE = 4, F_NOTE = 8, F_SS = 16, LINK_VERSION = 3;
 
   function encodeShare(p) {
     const out = [], text = new TextEncoder();
@@ -839,6 +843,7 @@
     const str = s => { const b = text.encode(s); num(b.length); b.forEach(x => out.push(x)); };
     const tok = s => { const i = TOKENS.indexOf(s); if (i >= 0) num(i + 1); else { num(0); str(s); } };
     out.push(LINK_VERSION);
+    str(p.id || ""); num(p.rev || 0);
     num(p.weeks || 1);
     str(p.name); str(p.from); str(p.msg);
     num(p.days.length);
@@ -879,7 +884,10 @@
       };
       const tok = () => { const i = num(); if (i === 0) return str(); if (i > TOKENS.length) throw new Error("token"); return TOKENS[i - 1]; };
 
-      if (byte() !== LINK_VERSION) return null;
+      // Version 2 links have no plan ID, so the link itself identifies the plan
+      const version = byte();
+      if (version !== LINK_VERSION && version !== 2) return null;
+      const linkId = version === 2 ? "" : clip(str(), 24), rev = version === 2 ? 0 : num();
       const weeks = Math.min(Math.max(num(), 1), MAX_WEEKS);
       const name = clip(str(), 100), from = clip(str(), 60), msg = clip(str(), 300);
       const dayCount = num();
@@ -908,7 +916,7 @@
       }
       if (pos !== b.length || !planDays.length) return null;
       const single = planDays.length === 1 && planDays[0].dow < 0;
-      return { name: name || (single && planDays[0].name) || "Training plan", from, msg, weeks: single ? 1 : weeks, days: planDays };
+      return { id: ID_KEY.test(linkId) ? linkId : "p" + hashStr(code).toString(36), rev, name: name || (single && planDays[0].name) || "Training plan", from, msg, weeks: single ? 1 : weeks, days: planDays };
     } catch (e) { return null; }
   }
   const shareUrl = code => location.origin + location.pathname + "#w=" + code;
@@ -971,7 +979,19 @@
     $("rcDate").value = keyOf(start);
     $("rcDateLabel").textContent = single ? "Do it on" : p.weeks > 1 ? "Start the week of (repeats for " + p.weeks + " weeks)" : "Start the week of";
     $("rcDay").textContent = single ? "Add to this day" : p.weeks > 1 ? "Add " + p.weeks + " weeks" : "Add to this week";
+    const mine = subs.find(s => s.id === p.id);
+    if (!single) {
+      $("rcDay").textContent = mine ? "Update my plan" : "Follow this plan";
+      $("rcDateLabel").textContent = p.weeks > 1 ? "Start the week of (runs for " + p.weeks + " weeks)" : "Start the week of";
+    }
     [$("rcDay"), $("rcLib"), $("rcDate").parentElement, $("rcTrust")].forEach(el => { el.hidden = previewOnly; });
+    if (!previewOnly && mine) {
+      $("rcDate").parentElement.hidden = true;
+      const older = p.rev < mine.rev, same = p.rev === mine.rev;
+      $("rcFollowing").textContent = same ? "You already follow this plan." : older ? "You already have a newer version of this plan." : "You follow this plan. This link has a newer version, and your logs stay as they are.";
+      $("rcDay").hidden = same || older;
+    }
+    $("rcFollowing").hidden = previewOnly || !mine;
     $("rcSkip").textContent = previewOnly ? "Close" : "Not now";
     if (!recvDlg.open) recvDlg.showModal();
   }
@@ -992,9 +1012,18 @@
     saveIncoming(); saveLib(); recvDlg.close(); render(); toast("Saved " + incoming.name);
   });
   $("rcDay").addEventListener("click", () => {
-    const saved = saveIncoming();
     const m = $("rcDate").value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     const picked = m ? new Date(+m[1], +m[2] - 1, +m[3], 12) : current;
+    if (incoming.days[0].dow >= 0) {
+      const row = followPlan(incoming, keyOf(atNoon(new Date(picked.getTime() - dowMon(picked) * DAY_MS))));
+      recvDlg.close();
+      if (!row) return;
+      const first = fromKey(row.start);
+      current = atNoon(new Date(first.getTime() + Math.min(...row.days.map(d => d.dow)) * DAY_MS));
+      render(); renderProgress(); toast("Following " + row.name);
+      return;
+    }
+    const saved = saveIncoming();
     const monday = picked.getTime() - dowMon(picked) * DAY_MS;
     let first = null;
     for (let week = 0; week < (incoming.weeks || 1); week++) saved.forEach(s => {
@@ -1006,6 +1035,488 @@
     current = first;
     saveLib(); saveDays(); recvDlg.close(); render(); toast("Added " + incoming.name);
   });
+
+  // ---------- Your data: logs, seasons, followed plans, save file ----------
+  // The browser holds the working copy. A save file you own is the durable copy.
+  // File contents are treated like share links: cleaned field by field before use.
+  const toId = v => typeof v === "string" && ID_KEY.test(v) ? v : "";
+  const cleanLog = l => {
+    if (!l || typeof l !== "object" || !DATE_KEY.test(l.date) || !Array.isArray(l.sets)) return null;
+    const ex = clip(l.ex, 100);
+    if (!ex) return null;
+    return { id: toId(l.id) || uid(), t: Number.isFinite(l.t) ? l.t : Date.now(), date: l.date, ex, unit: l.unit === "kg" ? "kg" : "lb", plan: toId(l.plan),
+      sets: l.sets.slice(0, 30).filter(s => s && typeof s === "object").map(s => ({ w: clip(s.w, 12), r: clip(s.r, 20) })), note: clip(l.note, 300) };
+  };
+  const cleanSeason = s => {
+    if (!s || typeof s !== "object" || !DATE_KEY.test(s.start)) return null;
+    const name = clip(s.name, 60);
+    if (!name) return null;
+    return { id: toId(s.id) || uid(), name, start: s.start, end: DATE_KEY.test(s.end) ? s.end : "", goal: clip(s.goal, 200) };
+  };
+  const cleanSub = s => {
+    if (!s || typeof s !== "object" || !toId(s.id) || !DATE_KEY.test(s.start) || !Array.isArray(s.days)) return null;
+    const list = s.days.slice(0, 7).map(d => {
+      if (!d || !Number.isInteger(d.dow) || d.dow < 0 || d.dow > 6 || !Array.isArray(d.items)) return null;
+      const items = d.items.slice(0, MAX_ITEMS).filter(i => i && typeof i === "object").map(cleanItem).filter(i => i.name);
+      return items.length ? { dow: d.dow, name: clip(d.name, 100), type: cleanType(d.type), items } : null;
+    }).filter(Boolean);
+    if (!list.length) return null;
+    return { id: s.id, name: clip(s.name, 100) || "Training plan", from: clip(s.from, 60), msg: clip(s.msg, 300), start: s.start,
+      weeks: Math.min(Math.max(Number(s.weeks) || 1, 1), MAX_WEEKS), rev: Number.isFinite(s.rev) ? s.rev : 0, days: list };
+  };
+  const cleanList = (v, fn) => Array.isArray(v) ? v.map(fn).filter(Boolean) : [];
+
+  let logs = cleanList(store.get("logs", []), cleanLog);
+  let seasons = cleanList(store.get("seasons", []), cleanSeason);
+  let subs = cleanList(store.get("subs", []), cleanSub);
+  let gone = store.get("gone", {}); // Deleted IDs, so a merge can't bring them back
+  if (!gone || typeof gone !== "object" || Array.isArray(gone)) gone = {};
+  const saveLogs = () => store.set("logs", logs);
+  const saveSeasons = () => store.set("seasons", seasons);
+  const saveSubs = () => store.set("subs", subs);
+  const markGone = id => { gone[id] = Date.now(); store.set("gone", gone); };
+
+  function dump() {
+    const done = {};
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k.startsWith(PREFIX + "done:")) done[k.slice(PREFIX.length + 5)] = JSON.parse(localStorage.getItem(k));
+      }
+    } catch (e) {}
+    return { app: "thelift", version: 2, updated: Number(store.get("updated", 0)) || Date.now(), library, days, done, logs, seasons, subs, gone,
+      prefs: { program: prefs.program, mode: prefs.mode, from: prefs.from || "", unit: prefs.unit || "lb" } };
+  }
+
+  // Adds anything new from a backup or save file. Nothing already here is overwritten,
+  // except a followed plan, where the higher revision wins.
+  function mergeData(d) {
+    if (!d || typeof d !== "object") return false;
+    const dead = d.gone && typeof d.gone === "object" && !Array.isArray(d.gone) ? d.gone : {};
+    Object.keys(dead).forEach(id => { if (ID_KEY.test(id)) gone[id] = Number(dead[id]) || Date.now(); });
+    const alive = x => !Object.prototype.hasOwnProperty.call(gone, x.id);
+    cleanList(d.library, cleanWorkout).forEach(w => { if (alive(w) && !library.some(x => x.id === w.id)) library.push(w); });
+    cleanList(d.logs, cleanLog).forEach(l => { if (!logs.some(x => x.id === l.id)) logs.push(l); });
+    cleanList(d.seasons, cleanSeason).forEach(s => { if (!seasons.some(x => x.id === s.id)) seasons.push(s); });
+    cleanList(d.subs, cleanSub).forEach(s => {
+      const i = subs.findIndex(x => x.id === s.id);
+      if (i < 0) subs.push(s); else if (s.rev > subs[i].rev) subs[i] = s;
+    });
+    library = library.filter(alive); logs = logs.filter(alive); seasons = seasons.filter(alive); subs = subs.filter(alive);
+    Object.entries(d.days && typeof d.days === "object" ? d.days : {}).forEach(([k, ids]) => {
+      if (DATE_KEY.test(k) && Array.isArray(ids)) days[k] = [...new Set((days[k] || []).concat(ids.filter(i => typeof i === "string" && ID_KEY.test(i) && !Object.prototype.hasOwnProperty.call(gone, i))))];
+    });
+    Object.entries(d.done && typeof d.done === "object" ? d.done : {}).forEach(([k, v]) => {
+      if (!DATE_KEY.test(k) || !v || typeof v !== "object") return;
+      const done = store.get("done:" + k, {});
+      Object.keys(v).forEach(id => { if (DONE_KEY.test(id)) done[id] = true; });
+      store.set("done:" + k, done);
+    });
+    const p = d.prefs && typeof d.prefs === "object" ? d.prefs : {};
+    if (!prefs.from && p.from) prefs.from = clip(p.from, 60);
+    if (!prefs.unit && (p.unit === "kg" || p.unit === "lb")) prefs.unit = p.unit;
+    savePrefs(); saveLib(); saveDays(); saveLogs(); saveSeasons(); saveSubs(); store.set("gone", gone);
+    return true;
+  }
+
+  // ---------- Save file ----------
+  const FILE_API = typeof window.showSaveFilePicker === "function" && typeof window.showOpenFilePicker === "function";
+  const FILE_TYPES = [{ description: "TheLift data", accept: { "application/json": [".json"] } }];
+  let fileHandle = null, fileState = FILE_API ? "none" : "unsupported", saveTimer = null, lastSave = 0;
+
+  function idb(mode, fn) {
+    return new Promise((resolve, reject) => {
+      const open = indexedDB.open("thelift", 1);
+      open.onupgradeneeded = () => open.result.createObjectStore("kv");
+      open.onerror = () => reject(open.error);
+      open.onsuccess = () => {
+        const tx = open.result.transaction("kv", mode), req = fn(tx.objectStore("kv"));
+        tx.oncomplete = () => { open.result.close(); resolve(req.result); };
+        tx.onerror = () => { open.result.close(); reject(tx.error); };
+      };
+    });
+  }
+
+  async function writeFile() {
+    if (!fileHandle || fileState !== "ready") return;
+    try {
+      const w = await fileHandle.createWritable();
+      await w.write(JSON.stringify(dump()));
+      await w.close();
+      lastSave = Date.now();
+      store.mark("lastBackup", lastSave);
+    } catch (e) { fileState = "blocked"; }
+    renderSaveBar();
+  }
+  // Called after every saved change, so edits reach the file a moment later
+  function scheduleSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(writeFile, 800);
+  }
+  async function readFileInto() {
+    const text = await (await fileHandle.getFile()).text();
+    if (!text.trim()) return;
+    if (text.length > 50000000) throw new Error("too big");
+    const d = JSON.parse(text);
+    const newer = Number(d.updated) > Number(store.get("updated", 0));
+    if (!newer && logs.length) return;
+    mergeData(d);
+    if (newer) store.mark("updated", Number(d.updated));
+    render(); renderBuild(); routeView();
+  }
+  async function useFile(handle, merge) {
+    fileHandle = handle;
+    fileState = "ready";
+    try { await idb("readwrite", s => s.put(handle, "file")); } catch (e) {}
+    try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) {}
+    if (merge) {
+      try { await readFileInto(); }
+      catch (e) { toast("That file couldn't be read. Choose a TheLift save file."); fileHandle = null; fileState = "none"; renderSaveBar(); return; }
+    }
+    await writeFile();
+    renderSaveBar();
+    if (fileState === "ready") toast("Saving to " + handle.name);
+  }
+  async function createFile() {
+    try { await useFile(await window.showSaveFilePicker({ suggestedName: "thelift.json", types: FILE_TYPES }), false); }
+    catch (e) { if (e.name !== "AbortError") toast("The save file couldn't be created. Try another folder."); }
+  }
+  async function openFile() {
+    try {
+      const [h] = await window.showOpenFilePicker({ types: FILE_TYPES, multiple: false });
+      if (h.requestPermission && await h.requestPermission({ mode: "readwrite" }) !== "granted") { toast("TheLift needs permission to save to that file."); return; }
+      await useFile(h, true);
+    } catch (e) { if (e.name !== "AbortError") toast("That file couldn't be opened."); }
+  }
+  async function reconnectFile() {
+    try {
+      if (await fileHandle.requestPermission({ mode: "readwrite" }) === "granted") await useFile(fileHandle, true);
+    } catch (e) { fileHandle = null; fileState = "none"; renderSaveBar(); }
+  }
+  async function initFile() {
+    if (!FILE_API) return renderSaveBar();
+    try { fileHandle = (await idb("readonly", s => s.get("file"))) || null; } catch (e) { fileHandle = null; }
+    if (fileHandle) {
+      try {
+        if (await fileHandle.queryPermission({ mode: "readwrite" }) === "granted") { fileState = "ready"; await readFileInto(); }
+        else fileState = "reconnect";
+      } catch (e) { fileState = "reconnect"; }
+    }
+    renderSaveBar();
+  }
+
+  function saveBarButton(label, fn, primary) {
+    const b = document.createElement("button");
+    b.className = "btn small" + (primary ? " primary" : "");
+    b.textContent = label;
+    b.addEventListener("click", fn);
+    return b;
+  }
+  function renderSaveBar() {
+    ["saveBar", "saveCard"].forEach(id => {
+      const el = $(id);
+      el.innerHTML = "";
+      const text = document.createElement("span"), acts = document.createElement("div");
+      acts.className = "acts";
+      const back = Number(store.get("lastBackup", 0));
+      const age = back ? Math.floor((Date.now() - back) / DAY_MS) : -1;
+      if (fileState === "ready") {
+        text.textContent = "Auto-saving to " + fileHandle.name + (lastSave ? " · saved " + new Date(lastSave).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "");
+      } else if (fileState === "reconnect" || fileState === "blocked") {
+        text.textContent = "Your save file needs permission again. Logs are safe here until you reconnect.";
+        acts.appendChild(saveBarButton("Reconnect", reconnectFile, true));
+      } else if (fileState === "none") {
+        text.textContent = logs.length ? "Your logs are only in this browser. Connect a save file so a wipe can't erase them." : "Connect a save file to protect your logs, or open one to restore them.";
+        acts.appendChild(saveBarButton("Create save file", createFile, true));
+        acts.appendChild(saveBarButton("Open existing", openFile));
+      } else {
+        text.textContent = !logs.length ? "This browser can't auto-save to a file. Use Export backup to keep a copy." : age < 0 ? "This browser can't auto-save to a file, and you have no backup yet." : "Last backup was " + (age === 0 ? "today" : age + " day" + (age === 1 ? "" : "s") + " ago") + ".";
+        acts.appendChild(saveBarButton("Export backup", () => $("exportBtn").click(), logs.length > 0 && age !== 0));
+      }
+      el.append(text, acts);
+      // The top banner stays out of the way once saving is healthy
+      if (id === "saveBar") el.hidden = fileState === "ready" || (fileState === "unsupported" && (!logs.length || (age >= 0 && age < 7)));
+    });
+  }
+
+  // ---------- Logging ----------
+  const repTarget = r => { const m = String(r || "").match(/^\d+/); return m ? m[0] : ""; };
+  const logKeyMatch = (l, date, ex, plan) => l.date === date && l.ex === ex && (l.plan || "") === (plan || "");
+  const lastLog = (ex, before) => logs.filter(l => l.ex === ex && l.date < before).sort((a, b) => b.date.localeCompare(a.date) || b.t - a.t)[0];
+  function fmtSets(l) {
+    const s = l.sets.filter(x => x.w || x.r);
+    if (!s.length) return "done";
+    const same = s.every(x => x.w === s[0].w && x.r === s[0].r);
+    const unit = s.some(x => x.w) ? " " + l.unit : "";
+    if (same) return s.length + " × " + s[0].r + (s[0].w ? " @ " + s[0].w + unit : "");
+    return s.map(x => (x.w ? x.w + "×" : "") + x.r).join(", ") + unit;
+  }
+  function logLine(key, log) {
+    const today = logs.find(l => logKeyMatch(l, key, log.ex, log.plan));
+    const last = lastLog(log.ex, key);
+    const line = document.createElement("div");
+    line.className = "logline" + (today ? " logged" : "");
+    const span = document.createElement("span");
+    span.textContent = today ? "Logged " + fmtSets(today) : last ? "Last: " + fmtSets(last) : "No history yet";
+    const b = document.createElement("button");
+    b.className = "btn small"; b.textContent = today ? "Edit" : "Log";
+    b.addEventListener("click", () => openLog(key, log));
+    line.append(span, b);
+    return line;
+  }
+
+  const logDlg = $("logDlg");
+  let logging = null, logSeq = 0;
+  function addLogSet(s) {
+    const n = ++logSeq, r = document.createElement("div");
+    r.className = "lset";
+    r.innerHTML = '<span class="lnum"></span>' +
+      '<label><span>Weight</span><input type="text" class="binput l-w" id="lw' + n + '" inputmode="decimal" maxlength="12"></label>' +
+      '<label><span>Reps / time</span><input type="text" class="binput l-r" id="lr' + n + '" maxlength="20"></label>' +
+      '<button type="button" class="x" aria-label="Remove set">×</button>';
+    r.querySelector(".l-w").value = s.w || "";
+    r.querySelector(".l-r").value = s.r || "";
+    r.querySelector(".x").addEventListener("click", () => { r.remove(); numberSets(); });
+    $("lSets").appendChild(r);
+    numberSets();
+  }
+  function numberSets() { [...$("lSets").children].forEach((r, i) => { r.querySelector(".lnum").textContent = i + 1; }); }
+  function openLog(key, log) {
+    const today = logs.find(l => logKeyMatch(l, key, log.ex, log.plan)), last = lastLog(log.ex, key);
+    logging = { key, log, existing: today || null };
+    $("lTitle").textContent = log.ex;
+    $("lLast").textContent = last ? "Last time (" + last.date + "): " + fmtSets(last) : "First time logging this exercise.";
+    $("lNote").value = today ? today.note : "";
+    $("lDelete").hidden = !today;
+    logging.unit = today ? today.unit : last ? last.unit : prefs.unit || "lb";
+    renderUnit();
+    $("lSets").innerHTML = "";
+    const count = Math.max(Number(log.sets) || 1, 1);
+    const defaults = today ? today.sets : Array.from({ length: Math.min(count, 12) }, (_, i) => ({
+      w: (last && (last.sets[i] || last.sets[last.sets.length - 1]) || {}).w || clip(log.weight, 12).replace(/[^\d.]/g, ""),
+      r: repTarget(log.reps) && !/min|s$|m$|yd|mile|hour/.test(log.reps) ? repTarget(log.reps) : clip(log.reps, 20) }));
+    defaults.forEach(addLogSet);
+    logDlg.showModal();
+  }
+  function renderUnit() {
+    ["lb", "kg"].forEach(u => $("lUnit" + u).setAttribute("aria-pressed", String(logging.unit === u)));
+  }
+  ["lb", "kg"].forEach(u => $("lUnit" + u).addEventListener("click", () => { logging.unit = u; prefs.unit = u; savePrefs(); renderUnit(); }));
+  $("lAddSet").addEventListener("click", () => {
+    const rows = $("lSets").children, prev = rows[rows.length - 1];
+    addLogSet(prev ? { w: prev.querySelector(".l-w").value, r: prev.querySelector(".l-r").value } : {});
+  });
+  $("lCancel").addEventListener("click", () => logDlg.close());
+  $("lSave").addEventListener("click", () => {
+    const sets = [...$("lSets").children].map(r => ({ w: clip(r.querySelector(".l-w").value, 12), r: clip(r.querySelector(".l-r").value, 20) })).filter(s => s.w || s.r);
+    if (!sets.length) { toast("Add at least one set."); return; }
+    const { key, log, existing } = logging;
+    const row = { id: existing ? existing.id : uid(), t: Date.now(), date: key, ex: log.ex, unit: logging.unit, plan: log.plan || "", sets, note: clip($("lNote").value, 300) };
+    logs = logs.filter(l => l.id !== row.id).concat(row);
+    saveLogs();
+    if (log.done) { const done = store.get("done:" + key, {}); done[log.done] = true; store.set("done:" + key, done); }
+    logDlg.close(); render(); renderProgress();
+    toast("Logged " + log.ex);
+  });
+  $("lDelete").addEventListener("click", () => {
+    const id = logging.existing.id;
+    logs = logs.filter(l => l.id !== id); markGone(id); saveLogs();
+    logDlg.close(); render(); renderProgress(); toast("Log removed");
+  });
+
+  // ---------- Followed plans ----------
+  const fromKey = k => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d, 12); };
+  const mondayNumber = d => dayNumber(d) - dowMon(d);
+  function subsForDate(d) {
+    return subs.map(s => {
+      const start = fromKey(s.start), week = Math.floor((mondayNumber(d) - mondayNumber(start)) / 7);
+      if (week < 0 || week >= s.weeks) return null;
+      const day = s.days.find(x => x.dow === dowMon(d));
+      return day ? { sub: s, day, week: week + 1 } : null;
+    }).filter(Boolean);
+  }
+  function followPlan(p, startKey) {
+    const list = p.days.filter(d => d.dow >= 0);
+    const i = subs.findIndex(s => s.id === p.id);
+    const row = cleanSub({ id: p.id, name: p.name, from: p.from, msg: p.msg, weeks: p.weeks, rev: p.rev, start: i >= 0 ? subs[i].start : startKey, days: list });
+    if (!row) return null;
+    if (i >= 0) subs[i] = row; else subs.push(row);
+    delete gone[row.id]; store.set("gone", gone);
+    saveSubs();
+    return row;
+  }
+  function subCard(entry, key) {
+    const { sub, day, week } = entry, t = typeOf(day.type);
+    const card = document.createElement("article");
+    card.className = "card";
+    card.innerHTML = '<div class="card-head"><div><span class="tag" style="background:' + t.color + '">' + t.name + "</span><h3>" + esc(day.name || sub.name) + "</h3></div></div>" +
+      '<div class="meta"><span>' + esc(sub.name) + (sub.weeks > 1 ? " · week " + week + " of " + sub.weeks : "") + (sub.from ? " · from " + esc(sub.from) : "") + "</span></div>" +
+      (sub.msg ? '<p class="from-note">' + esc(sub.msg) + "</p>" : "") + '<div class="progress"><i></i></div><ul class="items"></ul>';
+    const ul = card.querySelector("ul");
+    let n = 0;
+    day.items.forEach((it, i) => {
+      const id = "mine-" + sub.id + "-" + day.dow + "-" + i;
+      const r = checkRow(key, id, esc(it.name), rxHtml(it), cueText(it), { ex: it.name, sets: it.sets, reps: it.reps, weight: it.weight, plan: sub.id, done: id });
+      if (r.done) n++; ul.appendChild(r.li);
+    });
+    card.querySelector(".progress i").style.width = (n / day.items.length * 100) + "%";
+    return card;
+  }
+
+  // ---------- Progress page ----------
+  let scope = "all";
+  const toLb = (w, unit) => unit === "kg" ? w * 2.20462 : w;
+  const scoped = () => {
+    const s = seasons.find(x => x.id === scope);
+    return s ? logs.filter(l => l.date >= s.start && (!s.end || l.date <= s.end)) : logs;
+  };
+  function prTable(list) {
+    const best = new Map();
+    list.forEach(l => l.sets.forEach(s => {
+      const w = parseFloat(s.w), r = parseFloat(s.r);
+      if (!(w > 0) || !(r > 0)) return;
+      const lb = toLb(w, l.unit), est = Math.round(w * (1 + r / 30));
+      const cur = best.get(l.ex);
+      if (!cur || lb > cur.lb || (lb === cur.lb && r > cur.r)) best.set(l.ex, { ex: l.ex, lb, w, r, unit: l.unit, date: l.date, est });
+    }));
+    return [...best.values()].sort((a, b) => b.date.localeCompare(a.date));
+  }
+  function renderProgress() {
+    const sc = $("seasonChips"); sc.innerHTML = "";
+    sc.appendChild(chip("All time", scope === "all", null, () => { scope = "all"; renderProgress(); }));
+    seasons.slice().sort((a, b) => b.start.localeCompare(a.start)).forEach(s => sc.appendChild(chip(s.name, scope === s.id, null, () => { scope = s.id; renderProgress(); })));
+    if (scope !== "all" && !seasons.some(s => s.id === scope)) scope = "all";
+
+    const season = seasons.find(s => s.id === scope), list = scoped();
+    const volume = list.reduce((a, l) => a + l.sets.reduce((b, s) => b + (parseFloat(s.w) > 0 && parseFloat(s.r) > 0 ? toLb(parseFloat(s.w), l.unit) * parseFloat(s.r) : 0), 0), 0);
+    const sets = list.reduce((a, l) => a + l.sets.length, 0);
+    const stats = [["Sessions", new Set(list.map(l => l.date)).size], ["Sets", sets], ["Volume", Math.round(volume).toLocaleString() + " lb"], ["Exercises", new Set(list.map(l => l.ex)).size]];
+    $("stats").innerHTML = stats.map(([k, v]) => '<div class="stat"><span class="label">' + k + "</span><b>" + esc(v) + "</b></div>").join("");
+
+    const info = $("seasonInfo"); info.innerHTML = "";
+    if (season) {
+      const p = document.createElement("p");
+      p.className = "hint";
+      p.textContent = season.start + (season.end ? " to " + season.end : " · in progress") + (season.goal ? " · Goal: " + season.goal : "");
+      info.appendChild(p);
+      if (!season.end) info.appendChild(saveBarButton("End season today", () => { season.end = keyOf(atNoon(new Date())); saveSeasons(); renderProgress(); toast("Season ended"); }));
+      const del = saveBarButton("Delete season", () => {
+        if (!del.classList.contains("armed")) { del.classList.add("armed", "danger"); del.textContent = "Confirm delete (logs stay)"; return; }
+        seasons = seasons.filter(x => x.id !== season.id); markGone(season.id); saveSeasons(); renderProgress(); toast("Season deleted");
+      });
+      del.classList.add("ghost");
+      info.appendChild(del);
+    }
+
+    const prs = prTable(list);
+    $("prList").innerHTML = prs.length ? prs.slice(0, 40).map(p => "<li><b>" + esc(p.ex) + "<small>" + esc(p.date) + " · est. 1RM " + p.est + " " + p.unit + "</small></b><span>" + esc(p.w) + " " + p.unit + " × " + esc(p.r) + "</span></li>").join("") : '<li class="hint">Log a set with a weight to see your bests here.</li>';
+
+    const byDate = new Map();
+    list.slice().sort((a, b) => b.date.localeCompare(a.date) || a.t - b.t).forEach(l => { if (!byDate.has(l.date)) byDate.set(l.date, []); byDate.get(l.date).push(l); });
+    $("logList").innerHTML = byDate.size ? [...byDate.entries()].slice(0, 30).map(([d, rows]) => '<li class="rc-day">' + esc(d) + "</li>" + rows.map(l => "<li><b>" + esc(l.ex) + (l.note ? "<small>" + esc(l.note) + "</small>" : "") + "</b><span>" + esc(fmtSets(l)) + "</span></li>").join("")).join("") : '<li class="hint">Nothing logged yet. Press Log on any exercise.</li>';
+
+    const pl = $("planList"); pl.innerHTML = "";
+    if (!subs.length) pl.innerHTML = '<p class="hint">Plans you follow from a link show up here.</p>';
+    subs.forEach(s => {
+      const start = fromKey(s.start), planned = s.days.length * s.weeks;
+      const doneDays = new Set(logs.filter(l => l.plan === s.id).map(l => l.date)).size;
+      const c = document.createElement("div");
+      c.className = "lib-card";
+      c.innerHTML = "<h4>" + esc(s.name) + "</h4><p>" + (s.from ? "From " + esc(s.from) + " · " : "") + "Started " + esc(keyOf(start)) + " · " + s.weeks + " week" + (s.weeks === 1 ? "" : "s") + "</p><p>" + doneDays + " of " + planned + " days logged</p>";
+      const row = document.createElement("div"); row.className = "row";
+      const leave = saveBarButton("Stop following", () => {
+        if (!leave.classList.contains("armed")) { leave.classList.add("armed", "danger"); leave.textContent = "Confirm (logs stay)"; return; }
+        subs = subs.filter(x => x.id !== s.id); markGone(s.id); saveSubs(); render(); renderProgress(); toast("Stopped following " + s.name);
+      });
+      leave.classList.add("ghost");
+      row.appendChild(leave); c.appendChild(row); pl.appendChild(c);
+    });
+  }
+  $("seasonStart").value = keyOf(atNoon(new Date()));
+  $("seasonAdd").addEventListener("click", () => {
+    const s = cleanSeason({ name: $("seasonName").value, start: $("seasonStart").value, goal: $("seasonGoal").value });
+    if (!s) { toast("Give the season a name and a start date."); return; }
+    seasons.push(s); saveSeasons();
+    $("seasonName").value = ""; $("seasonGoal").value = "";
+    scope = s.id; renderProgress(); toast("Started " + s.name);
+  });
+
+  // ---------- Share page ----------
+  // Every link holds a full copy of the plan, so each person keeps their own and logs privately
+  function revealLink(link) {
+    $("shareLink").value = link;
+    $("shareResult").hidden = false;
+    copyLink($("shareLink"));
+  }
+  function posterActions(getLink, title) {
+    const row = document.createElement("div");
+    row.className = "poster-acts";
+    const copy = document.createElement("button");
+    copy.className = "btn poster-btn"; copy.textContent = "Copy link";
+    copy.addEventListener("click", () => { const l = getLink(); if (l) revealLink(l); });
+    row.appendChild(copy);
+    if (typeof navigator.share === "function") {
+      const send = document.createElement("button");
+      send.className = "btn poster-btn alt"; send.textContent = "Send";
+      send.addEventListener("click", () => { const l = getLink(); if (l) navigator.share({ title, url: l }).catch(() => {}); });
+      row.appendChild(send);
+    }
+    return row;
+  }
+  // The week is drawn as seven blocks, colored by workout type
+  function poster(eyebrow, title, line, planDays, getLink) {
+    const c = document.createElement("article");
+    c.className = "poster";
+    const week = planDays ? '<div class="poster-week">' + DOW.map((n, i) => {
+      const d = planDays.find(x => x.dow === i);
+      return '<div class="poster-day' + (d ? "" : " off") + '"' + (d ? ' style="background:' + typeOf(d.type).color + '"' : "") + '><span>' + n.slice(0, 1) + "</span><b>" + (d ? d.items.length : "–") + "</b></div>";
+    }).join("") + "</div>" : "";
+    c.innerHTML = '<div class="label">' + esc(eyebrow) + "</div><h3>" + esc(title) + "</h3>" + week + "<p>" + esc(line) + "</p>";
+    c.appendChild(posterActions(getLink, title));
+    return c;
+  }
+  const countLine = (planDays, weeks, from) => {
+    const n = planDays.reduce((a, d) => a + d.items.length, 0);
+    return [planDays.length + " day" + (planDays.length === 1 ? "" : "s") + " a week", n + " exercises", weeks > 1 ? weeks + " weeks" : "", from ? "from " + from : ""].filter(Boolean).join(" · ");
+  };
+
+  function seasonSummary() {
+    const today = keyOf(atNoon(new Date()));
+    const s = seasons.find(x => x.start <= today && (!x.end || x.end >= today));
+    const list = s ? logs.filter(l => l.date >= s.start && (!s.end || l.date <= s.end)) : logs;
+    const volume = list.reduce((a, l) => a + l.sets.reduce((b, x) => b + (parseFloat(x.w) > 0 && parseFloat(x.r) > 0 ? toLb(parseFloat(x.w), l.unit) * parseFloat(x.r) : 0), 0), 0);
+    return { name: s ? s.name : "All time", goal: s ? s.goal : "", sessions: new Set(list.map(l => l.date)).size, sets: list.reduce((a, l) => a + l.sets.length, 0), volume: Math.round(volume),
+      bests: prTable(list).sort((a, b) => b.lb - a.lb).slice(0, 3) };
+  }
+  function renderSeasonCard() {
+    const s = seasonSummary(), el = $("seasonCard");
+    el.innerHTML = '<div class="label">Season card</div><h3>' + esc(s.name) + "</h3>" +
+      (s.goal ? "<p>Goal: " + esc(s.goal) + "</p>" : "") +
+      '<div class="poster-stats"><div><b>' + s.sessions + "</b><span>sessions</span></div><div><b>" + s.sets + "</b><span>sets</span></div><div><b>" + s.volume.toLocaleString() + "</b><span>lb moved</span></div></div>" +
+      (s.bests.length ? '<ul class="poster-bests">' + s.bests.map(b => "<li><span>" + esc(b.ex) + "</span><b>" + esc(b.w) + " " + b.unit + " × " + esc(b.r) + "</b></li>").join("") + "</ul>" : "<p>Log a few sets and your best lifts will land here.</p>");
+    const b = document.createElement("button");
+    b.className = "btn poster-btn"; b.textContent = "Copy as text";
+    b.disabled = !s.sessions;
+    b.addEventListener("click", async () => {
+      const text = s.name + ": " + s.sessions + " sessions, " + s.sets + " sets, " + s.volume.toLocaleString() + " lb moved." + (s.bests.length ? " Bests: " + s.bests.map(x => x.ex + " " + x.w + " " + x.unit + " × " + x.r).join(", ") + "." : "");
+      try { await navigator.clipboard.writeText(text); toast("Season card copied"); } catch (e) { $("shareLink").value = text; $("shareResult").hidden = false; $("shareLink").focus(); $("shareLink").select(); toast("Copy the selected text"); }
+    });
+    const row = document.createElement("div"); row.className = "poster-acts"; row.appendChild(b);
+    el.appendChild(row);
+  }
+
+  function renderShare() {
+    renderSeasonCard();
+    const wrap = $("sharePlans"); wrap.innerHTML = "";
+    const draft = usedDays();
+    if (draft.length) wrap.appendChild(poster("In your builder", clip(plan.name, 100) || "Training plan", countLine(draft, plan.weeks, prefs.from), draft, () => { makeLink(); return $("bLink").value; }));
+    subs.forEach(s => wrap.appendChild(poster("You follow", s.name, countLine(s.days, s.weeks, s.from), s.days, () => shareUrl(encodeShare(s)))));
+    library.slice(0, 12).forEach(w => {
+      const t = typeOf(w.type);
+      wrap.appendChild(poster(t.name + " workout", w.name, w.items.length + " exercises" + (w.from ? " · from " + w.from : ""), null, () => shareUrl(encodeShare({ name: "", from: clip(prefs.from, 60), msg: "", days: [{ dow: -1, name: w.name, type: w.type, items: w.items.map(cleanItem) }] }))));
+    });
+    if (!wrap.children.length) wrap.innerHTML = '<div class="empty"><p>Nothing to share yet. Build a plan or load a program, and it will show up here.</p></div>';
+  }
 
   // ---------- Build page ----------
   const CARDIO_PICKS = [
@@ -1092,13 +1603,13 @@
       week[i] = { name: clip(x.name, 100), type: cleanType(x.type), items: x.items.slice(0, MAX_ITEMS).filter(Boolean).map(cleanItem) };
     });
     const w = d && Number(d.weeks);
-    return { name: clip(d && d.name, 100), msg: clip(d && d.msg, 300), weeks: w >= 1 && w <= MAX_WEEKS ? w : 1, week };
+    return { id: toId(d && d.id), rev: Number.isFinite(d && d.rev) ? d.rev : 0, edited: !!(d && d.edited), name: clip(d && d.name, 100), msg: clip(d && d.msg, 300), weeks: w >= 1 && w <= MAX_WEEKS ? w : 1, week };
   }
   let plan = loadDraft(), bDay = dowMon(new Date()), pickGroup = "chest", pickQuery = "";
   const saveDraft = () => store.set("draft", plan);
   const usedDays = () => plan.week.map((d, i) => ({ dow: i, name: d.name.trim(), type: d.type, items: d.items.filter(x => x.name.trim()) })).filter(d => d.items.length);
 
-  function changed() { saveDraft(); $("bResult").hidden = true; renderBuildBar(); }
+  function changed() { plan.edited = true; saveDraft(); $("bResult").hidden = true; renderBuildBar(); }
 
   // One level of undo for actions that replace or remove work
   let undoState = null;
@@ -1234,6 +1745,7 @@
       week[d.d] = { name: d.n, type: cleanType(d.t), items: d.x.map(x => cleanItem({ name: x[0], sets: x[1], reps: x[2], rest: x[3], rpe: x[4], note: x[5], ss: x[6] === true })) };
     });
     plan.week = week;
+    plan.id = ""; plan.rev = 0;
     plan.name = phase ? p.name + " · " + phase.label : p.name;
     plan.weeks = phase ? 1 : p.weeks || 1;
     plan.msg = "";
@@ -1276,7 +1788,7 @@
   function renderBuild() { renderBuildWeek(); renderPicker(); renderSheet(); renderBuildBar(); }
 
   function planForShare() {
-    return { name: clip(plan.name, 100), from: clip(prefs.from, 60), msg: clip(plan.msg, 300), weeks: plan.weeks,
+    return { id: plan.id, rev: plan.rev, name: clip(plan.name, 100), from: clip(prefs.from, 60), msg: clip(plan.msg, 300), weeks: plan.weeks,
       days: usedDays().map(d => ({ dow: d.dow, name: clip(d.name, 100), type: d.type, items: d.items.map(cleanItem).filter(i => i.name) })) };
   }
 
@@ -1317,11 +1829,14 @@
     }
     b.classList.remove("armed"); b.textContent = "Start over";
     snapshot();
-    plan = { name: "", msg: "", weeks: 1, week: emptyWeek() };
+    plan = { id: "", rev: 0, edited: false, name: "", msg: "", weeks: 1, week: emptyWeek() };
     syncPlanFields(); changed(); renderBuild();
   });
 
   function makeLink() {
+    // A plan keeps its ID when edited, so people following it can update from a newer link
+    if (!plan.id) plan.id = uid();
+    if (plan.edited || !plan.rev) { plan.rev = Math.max(plan.rev + 1, Math.floor(Date.now() / 60000)); plan.edited = false; saveDraft(); }
     const code = encodeShare(planForShare());
     if (code.length > MAX_CODE) { toast("This plan is too long for one link. Shorten the notes."); return false; }
     const link = shareUrl(code);
@@ -1337,7 +1852,7 @@
   });
   $("bPreview").addEventListener("click", () => {
     const p = planForShare();
-    showPlan(Object.assign(p, { name: p.name || "Training plan" }), true);
+    showPlan(Object.assign(p, { name: p.name || "Training plan", id: p.id || "preview" }), true);
   });
   $("bSave").addEventListener("click", () => {
     const p = planForShare();
@@ -1347,12 +1862,14 @@
   });
 
   function routeView() {
-    const build = location.hash === "#build";
-    $("viewToday").hidden = build;
-    $("viewBuild").hidden = !build;
-    $("tabToday").toggleAttribute("aria-current", false);
-    $("tabBuild").toggleAttribute("aria-current", false);
-    $(build ? "tabBuild" : "tabToday").setAttribute("aria-current", "page");
+    const view = { "#build": "Build", "#progress": "Progress", "#share": "Share" }[location.hash] || "Today";
+    ["Today", "Build", "Progress", "Share"].forEach(v => {
+      $("view" + v).hidden = v !== view;
+      $("tab" + v).toggleAttribute("aria-current", false);
+    });
+    $("tab" + view).setAttribute("aria-current", "page");
+    if (view === "Progress") renderProgress();
+    if (view === "Share") renderShare();
   }
   window.addEventListener("hashchange", () => { checkShareLink(); routeView(); });
 
@@ -1379,6 +1896,10 @@
   renderTemplates();
   renderPresets();
   renderBuild();
+  renderProgress();
+  renderSaveBar();
   checkShareLink();
   routeView();
+  appReady = true;
+  initFile();
 })();
