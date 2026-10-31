@@ -17,7 +17,7 @@ A daily training page: a lifting session and a cardio workout for every day, plu
 - **Logging:** press Log on any exercise to record weight and reps set by set, with last time shown.
 - **Copy to The Truer Path:** copy a day's logs as rows and paste them into the first empty Date cell of your tab. Names match the sheet, and kilograms convert to pounds.
 - **Following plans:** open a plan link and press Follow. Everyone following the same link logs their own results in their own file. A newer link for the same plan updates it, and logs stay.
-- **Share page:** poster-style cards for your plan, followed plans and saved workouts, plus a season card you can copy as text. Each person keeps their own copy.
+- **Share page:** poster-style cards for your plan, followed plans and saved workouts, plus a season card. Copy a link, text or a PNG image. Each person keeps their own copy.
 - **Seasons and PRs:** the Progress page shows sessions, volume, personal records and history, for all time or one season.
 - **Save file:** where the browser supports it, TheLift auto-saves to a file you choose, so clearing browser data can't erase your logs. Open that file to restore everything. Other browsers use Export backup.
 
@@ -27,20 +27,20 @@ A daily training page: a lifting session and a cardio workout for every day, plu
 
 ## Compact links
 
-The plan is stored inside the link, so there is no shortener or database. Links use a small binary format: known exercises and common values such as `3` or `90 s` become positions in fixed lists, and only custom text is spelled out. A six-day plan with 36 exercises comes to about 450 characters.
+The plan is stored inside the link, so there is no shortener or database. Links hold numbers only: exercises, reps and programs are positions in fixed lists, packed into bits. A link has no text in it, so custom exercises, notes, rest times, names and messages can't be sent. Unedited programs send only a program number, and their notes come from the site.
 
-`CATALOG` and `TOKENS` in `app.js` are append-only. Add new entries at the end, and never reorder or remove any, or existing links will change meaning.
+`CATALOG`, `REPS` and `PRESETS` are append-only. Add new entries at the end, and never reorder or remove any, or existing links will change meaning.
 
 ## Share link safety
 
 Share links are treated as untrusted input:
 
-- **No code runs from a link.** Link contents are shown only as plain text, and a Content Security Policy blocks inline and injected scripts.
+- **No text in links.** A link holds only numbers that point into fixed lists, so it can't carry code, wording or web addresses. A Content Security Policy also blocks inline and injected scripts.
 - **Nothing is saved without a click.** A link opens a preview first, and it can only add new entries. It cannot change or delete existing workouts.
 - **No data leaves the page.** The site makes no data requests, and the part of the link holding the plan is never sent to a server. Save files stay wherever you put them.
 - **Size limits apply.** Oversized or malformed links are rejected, and every field has a length limit. Backup imports and save files are cleaned the same way.
 
-Three limits to keep in mind: sender names are not verified, anyone with a link can read that plan, and a link cannot be cancelled once sent. Keep private details out of plan names and notes.
+Two limits to keep in mind: anyone with a link can read that plan, and a link cannot be cancelled once sent.
 
 ## Publish on GitHub Pages
 

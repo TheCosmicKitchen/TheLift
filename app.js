@@ -127,8 +127,8 @@
   POOL.arms = POOL.biceps.concat(POOL.triceps);
   const findEx = name => { for (const k in POOL) { const e = POOL[k].find(x => x.name === name); if (e) return e; } return { name, cue: "" }; };
 
-  // Share-link dictionaries. APPEND ONLY: a link stores positions in these lists,
-  // so reordering or removing an entry would change what existing links mean.
+  // Share-link dictionaries. APPEND ONLY: a link stores positions in these lists and in
+  // PRESETS, so reordering or removing an entry would change what existing links mean.
   const CATALOG = [
     "Barbell Bench Press", "Incline Barbell Press", "Dumbbell Bench Press", "Incline Dumbbell Press", "Close-Grip Bench Press",
     "Weighted Dips", "Machine Chest Press", "Standing Overhead Press", "Seated Dumbbell Shoulder Press", "Half-Kneeling Landmine Press",
@@ -188,14 +188,12 @@
     "Plyo Push-Up", "Weighted Push-Up",
     "Turkish Get-Up", "Run/Walk Intervals", "Interval Work", "Sweet Spot Intervals"
   ];
-  const TOKENS = [
-    "", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "18", "20", "25", "30",
-    "6–8", "8–10", "10–12", "12–15", "15–20", "6-8", "8-10", "10-12", "12-15", "15-20", "AMRAP", "—",
-    "30 s", "45 s", "60 s", "75 s", "90 s", "60–90 s", "2 min", "2–3 min", "3 min", "4 min", "5 min",
-    "10 min", "15 min", "20 min", "30 min", "45 min", "60 min", "90 min",
-    "5 / side", "8 / side", "10 / side", "8 / leg", "10 / leg", "20 s / side", "30 s / side", "40 m", "2000 m",
-    "6 × 3 min", "8 × 500 m", "10 × 100 m", "5 × 5 min", "10 × 15 s", "10 × 1 min", "8 × 1 min",
-    "5+", "3+", "1+", "3–5", "4–6", "5–8", "6–10", "8–12", "10–15", "12–20", "3–5 min", "2 hours", "200 yd", "75 yd", "100 yd", "20 s", "3 miles"
+  // Reps or time values a link can carry, besides plain numbers from 1 to 60
+  const REPS = [
+    "AMRAP", "—", "5+", "3+", "1+", "5/3/1+", "3–5", "4–6", "5–8", "6–8", "6–10", "8–10", "8–12", "10–12", "10–15", "12–15", "12–20", "15–20",
+    "30 s", "45 s", "60 s", "75 s", "90 s", "60–90 s", "2 min", "2–3 min", "3 min", "4 min", "5 min", "8 min", "10 min", "15 min", "20 min", "25 min", "28 min", "30 min", "40 min", "45 min", "60 min", "75 min", "90 min", "2 hours",
+    "5 / side", "8 / side", "10 / side", "8 / leg", "10 / leg", "20 s / side", "30 s / side", "60 s / side",
+    "40 m", "2000 m", "75 yd", "100 yd", "200 yd", "3 miles", "4 miles", "6 × 3 min", "8 × 500 m", "10 × 100 m", "5 × 5 min", "10 × 15 s", "10 × 1 min", "8 × 1 min", "1 min", "2 min run", "2.5 min", "1 min run"
   ];
 
   // Set and rep prescriptions by slot role
@@ -808,7 +806,7 @@
   // A plan travels in the link's #w= part, which browsers never send to a server.
   // Links come from outside, so everything read from one is treated as untrusted:
   // size-capped, stripped to plain fields, shown as text, and saved only on a click.
-  const MAX_CODE = 12000, MAX_ITEMS = 40, MAX_WEEKS = 12;
+  const MAX_CODE = 2000, MAX_ITEMS = 40, MAX_WEEKS = 12;
   const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/, DONE_KEY = /^(lift|cardio|mine)-[\w-]{1,80}$/, ID_KEY = /^[\w-]{1,40}$/;
   const b64enc = bytes => btoa(Array.from(bytes, c => String.fromCharCode(c)).join("")).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   const b64dec = s => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
@@ -831,92 +829,135 @@
     return { id: typeof w.id === "string" && ID_KEY.test(w.id) ? w.id : uid(), name, type: cleanType(w.type), items, from: clip(w.from, 60), msg: clip(w.msg, 300) };
   }
 
-  // Compact format: exercises and common values are stored as positions in CATALOG and
-  // TOKENS, numbers as variable-length bytes, and anything else as UTF-8 text.
-  // Layout: version, plan ID, revision, weeks, name, from, message, day count, then for each day:
-  // weekday+type byte, name, item count, and items (exercise, flags, sets, reps, optional fields).
-  const F_WEIGHT = 1, F_REST = 2, F_RPE = 4, F_NOTE = 8, F_SS = 16, LINK_VERSION = 3;
+  // Links hold numbers only, packed into bits. Exercises, reps and programs are positions in
+  // fixed lists, so a link has no text in it at all: no names, notes or messages.
+  // Layout: version 3, kind 2. Then for a program: index 6, phase 5, weeks 4.
+  // For a plan: ID 32, revision 16, weeks 4, day mask 7, then days. For a workout: one day.
+  // Day: type 3, count 6, then items. Item: exercise 10, sets 4, reps 8, flags 3,
+  // then optional weight (kg flag 1, half-pounds or half-kilos 12) and optional RPE 4.
+  const LINK_VERSION = 1, KIND_PLAN = 0, KIND_WORKOUT = 1, KIND_PROGRAM = 2;
+  const F_WEIGHT = 4, F_RPE = 2, F_SS = 1;
+
+  function bitWriter() {
+    const out = [];
+    let cur = 0, n = 0;
+    return {
+      put(v, bits) {
+        for (let i = bits - 1; i >= 0; i--) {
+          cur = (cur << 1) | (Math.floor(v / 2 ** i) & 1);
+          if (++n === 8) { out.push(cur); cur = 0; n = 0; }
+        }
+      },
+      done() { if (n) out.push(cur << (8 - n)); return out; }
+    };
+  }
+  function bitReader(bytes) {
+    let pos = 0;
+    const total = bytes.length * 8;
+    const get = bits => {
+      if (pos + bits > total) throw new Error("short");
+      let v = 0;
+      for (let i = 0; i < bits; i++, pos++) v = v * 2 + ((bytes[pos >> 3] >> (7 - (pos & 7))) & 1);
+      return v;
+    };
+    // Only zero padding may follow the data
+    return { get, end() { if (total - pos >= 8) throw new Error("long"); while (pos < total) if (get(1)) throw new Error("junk"); } };
+  }
+  const repCode = r => {
+    const s = String(r || "").trim().replace(/(\d)-(\d)/, "$1–$2");
+    if (/^\d+$/.test(s) && Number(s) >= 1 && Number(s) <= 60) return Number(s);
+    const i = REPS.indexOf(s);
+    return i >= 0 ? i + 61 : 0;
+  };
+  const weightParts = w => {
+    const m = String(w || "").trim().match(/^(\d+(?:\.\d+)?)\s*(lb|lbs|kg)?$/i);
+    if (!m) return null;
+    const half = Math.round(Number(m[1]) * 2);
+    return half > 0 && half < 4096 ? { kg: /kg/i.test(m[2] || "") ? 1 : 0, half } : null;
+  };
+  const shareable = i => CATALOG.includes(i.name);
+  const randomPlanId = () => "p" + crypto.getRandomValues(new Uint32Array(1))[0].toString(36);
+  const planNumber = id => /^p[0-9a-z]{1,7}$/.test(id || "") && parseInt(id.slice(1), 36) <= 0xFFFFFFFF ? parseInt(id.slice(1), 36) : hashStr(id || "plan");
+  const cleanPreset = x => x && Number.isInteger(x.i) && PRESETS[x.i] && Number.isInteger(x.ph) && x.ph >= 0 ? { i: x.i, ph: x.ph } : null;
 
   function encodeShare(p) {
-    const out = [], text = new TextEncoder();
-    const num = n => { while (n > 127) { out.push((n & 127) | 128); n = Math.floor(n / 128); } out.push(n); };
-    const str = s => { const b = text.encode(s); num(b.length); b.forEach(x => out.push(x)); };
-    const tok = s => { const i = TOKENS.indexOf(s); if (i >= 0) num(i + 1); else { num(0); str(s); } };
-    out.push(LINK_VERSION);
-    str(p.id || ""); num(p.rev || 0);
-    num(p.weeks || 1);
-    str(p.name); str(p.from); str(p.msg);
-    num(p.days.length);
-    p.days.forEach(d => {
-      out.push((d.dow + 1) | (TYPES.findIndex(t => t.id === d.type) << 4));
-      str(d.name);
-      num(d.items.length);
-      d.items.forEach(i => {
-        const ex = CATALOG.indexOf(i.name);
-        num(ex + 1);
-        if (ex < 0) str(i.name);
-        out.push((i.weight ? F_WEIGHT : 0) | (i.rest ? F_REST : 0) | (i.rpe ? F_RPE : 0) | (i.note ? F_NOTE : 0) | (i.ss ? F_SS : 0));
-        tok(i.sets || ""); tok(i.reps || "");
-        if (i.weight) tok(i.weight);
-        if (i.rest) tok(i.rest);
-        if (i.rpe) tok(i.rpe);
-        if (i.note) str(i.note);
+    const w = bitWriter();
+    const items = d => {
+      const list = d.items.filter(shareable).slice(0, MAX_ITEMS);
+      w.put(cleanType(d.type) === d.type ? TYPES.findIndex(t => t.id === d.type) : TYPES.length - 1, 3);
+      w.put(list.length, 6);
+      list.forEach(i => {
+        const weight = weightParts(i.weight), rpe = /^\d{1,2}$/.test(i.rpe || "") && Number(i.rpe) >= 1 && Number(i.rpe) <= 10 ? Number(i.rpe) : 0;
+        const sets = /^\d{1,2}$/.test(i.sets || "") ? Math.min(Number(i.sets), 15) : 0;
+        w.put(CATALOG.indexOf(i.name), 10);
+        w.put(sets, 4);
+        w.put(repCode(i.reps), 8);
+        w.put((weight ? F_WEIGHT : 0) | (rpe ? F_RPE : 0) | (i.ss ? F_SS : 0), 3);
+        if (weight) { w.put(weight.kg, 1); w.put(weight.half, 12); }
+        if (rpe) w.put(rpe, 4);
       });
-    });
-    return b64enc(out);
+    };
+    w.put(LINK_VERSION, 3);
+    const preset = cleanPreset(p.preset);
+    if (preset) {
+      w.put(KIND_PROGRAM, 2); w.put(preset.i, 6); w.put(preset.ph, 5); w.put(p.weeks || 1, 4);
+    } else if (p.days.length === 1 && p.days[0].dow < 0) {
+      w.put(KIND_WORKOUT, 2); items(p.days[0]);
+    } else {
+      w.put(KIND_PLAN, 2);
+      w.put(planNumber(p.id), 32); w.put((p.rev || 0) & 65535, 16); w.put(p.weeks || 1, 4);
+      let mask = 0;
+      p.days.forEach(d => { mask |= 1 << d.dow; });
+      w.put(mask, 7);
+      p.days.slice().sort((a, b) => a.dow - b.dow).forEach(items);
+    }
+    return b64enc(w.done());
   }
 
   function decodeShare(code) {
     if (code.length > MAX_CODE) return null;
     try {
-      const b = b64dec(code), text = new TextDecoder("utf-8", { fatal: true });
-      let pos = 0;
-      const byte = () => { if (pos >= b.length) throw new Error("short"); return b[pos++]; };
-      const num = () => {
-        let n = 0, scale = 1;
-        for (let i = 0; i < 4; i++) { const x = byte(); n += (x & 127) * scale; if (x < 128) return n; scale *= 128; }
-        throw new Error("long");
-      };
-      const str = () => {
-        const n = num();
-        if (pos + n > b.length) throw new Error("short");
-        const s = text.decode(b.subarray(pos, pos + n)); pos += n; return s;
-      };
-      const tok = () => { const i = num(); if (i === 0) return str(); if (i > TOKENS.length) throw new Error("token"); return TOKENS[i - 1]; };
-
-      // Version 2 links have no plan ID, so the link itself identifies the plan
-      const version = byte();
-      if (version !== LINK_VERSION && version !== 2) return null;
-      const linkId = version === 2 ? "" : clip(str(), 24), rev = version === 2 ? 0 : num();
-      const weeks = Math.min(Math.max(num(), 1), MAX_WEEKS);
-      const name = clip(str(), 100), from = clip(str(), 60), msg = clip(str(), 300);
-      const dayCount = num();
-      if (dayCount < 1 || dayCount > 7) return null;
-      const seen = new Set(), planDays = [];
-      for (let k = 0; k < dayCount; k++) {
-        const head = byte(), dow = (head & 15) - 1, type = TYPES[head >> 4];
-        if (dow > 6 || seen.has(dow)) return null;
-        seen.add(dow);
-        const dayName = clip(str(), 100), count = num();
-        if (count > MAX_ITEMS) return null;
-        const items = [];
+      const r = bitReader(b64dec(code));
+      if (r.get(3) !== LINK_VERSION) return null;
+      const kind = r.get(2);
+      const weeksOf = v => Math.min(Math.max(v, 1), MAX_WEEKS);
+      const readDay = dow => {
+        const type = TYPES[r.get(3)], count = r.get(6), items = [];
+        if (count > MAX_ITEMS) throw new Error("items");
         for (let n = 0; n < count; n++) {
-          const ex = num();
-          if (ex > CATALOG.length) return null;
-          const exName = ex ? CATALOG[ex - 1] : str();
-          const flags = byte(), it = { name: exName, sets: tok(), reps: tok(), ss: !!(flags & F_SS) };
-          if (flags & F_WEIGHT) it.weight = tok();
-          if (flags & F_REST) it.rest = tok();
-          if (flags & F_RPE) it.rpe = tok();
-          if (flags & F_NOTE) it.note = str();
-          items.push(cleanItem(it));
+          const ex = r.get(10), sets = r.get(4), rep = r.get(8), flags = r.get(3);
+          if (ex >= CATALOG.length) throw new Error("exercise");
+          const weight = flags & F_WEIGHT ? { kg: r.get(1), half: r.get(12) } : null;
+          const rpe = flags & F_RPE ? r.get(4) : 0;
+          if (rpe > 10 || (rep > 60 && rep - 61 >= REPS.length)) throw new Error("value");
+          items.push(cleanItem({ name: CATALOG[ex], sets: sets ? String(sets) : "", reps: rep === 0 ? "" : rep <= 60 ? String(rep) : REPS[rep - 61],
+            weight: weight ? weight.half / 2 + (weight.kg ? " kg" : " lb") : "", rpe: rpe ? String(rpe) : "", ss: !!(flags & F_SS) }));
         }
-        const kept = items.filter(i => i.name);
-        if (kept.length) planDays.push({ dow, name: dayName, type: type ? type.id : "other", items: kept });
+        return { dow, name: "", type: type ? type.id : "other", items };
+      };
+      const finish = (id, rev, name, weeks, planDays, preset) => {
+        r.end();
+        if (!planDays.length) return null;
+        return { id, rev, name, from: "", msg: "", weeks, days: planDays, preset: preset || null };
+      };
+      if (kind === KIND_PROGRAM) {
+        const i = r.get(6), ph = r.get(5), weeks = r.get(4), p = PRESETS[i];
+        if (!p) return null;
+        const phase = p.phases ? p.phases[ph - 1] : null;
+        if (p.phases && !phase) return null;
+        const week = (phase ? phase.week : p.week).map(d => ({ dow: d.d, name: d.n, type: d.t, items: d.x.map(x => cleanItem({ name: x[0], sets: x[1], reps: x[2], rest: x[3], rpe: x[4], note: x[5], ss: x[6] === true })) }));
+        return finish("pr" + p.id.replace(/\W/g, "") + ph, 1, phase ? p.name + " · " + phase.label : p.name, weeksOf(weeks), week, { i, ph });
       }
-      if (pos !== b.length || !planDays.length) return null;
-      const single = planDays.length === 1 && planDays[0].dow < 0;
-      return { id: ID_KEY.test(linkId) ? linkId : "p" + hashStr(code).toString(36), rev, name: name || (single && planDays[0].name) || "Training plan", from, msg, weeks: single ? 1 : weeks, days: planDays };
+      if (kind === KIND_WORKOUT) {
+        const day = readDay(-1);
+        if (!day.items.length) return null;
+        return finish("p" + hashStr(code).toString(36), 0, day.items[0].name + " workout", 1, [day]);
+      }
+      if (kind !== KIND_PLAN) return null;
+      const id = r.get(32), rev = r.get(16), weeks = r.get(4), mask = r.get(7), planDays = [];
+      for (let dow = 0; dow < 7; dow++) if (mask & (1 << dow)) { const d = readDay(dow); if (d.items.length) planDays.push(d); }
+      if (!planDays.length) return null;
+      return finish("p" + id.toString(36), rev, planDays.length + "-day plan · " + planDays[0].items[0].name, weeksOf(weeks), planDays);
     } catch (e) { return null; }
   }
   const shareUrl = code => location.origin + location.pathname + "#w=" + code;
@@ -929,22 +970,26 @@
   const shareDlg = $("shareDlg"), recvDlg = $("recvDlg");
   let sharing = null, incoming = null;
 
+  // Says plainly what a link can't carry, so nothing goes missing silently
+  function leftOut(planDays) {
+    const all = planDays.flatMap(d => d.items);
+    const custom = all.filter(i => i.name && !shareable(i)).length, notes = all.filter(i => i.note).length, rests = all.filter(i => i.rest).length;
+    const parts = [custom ? custom + " custom exercise" + (custom === 1 ? "" : "s") : "", notes ? "notes" : "", rests ? "rest times" : ""].filter(Boolean);
+    return parts.length ? "Left out of this link: " + parts.join(", ") + "." : "";
+  }
+
   function updateShareLink() {
     const w = sharing;
-    $("shLink").value = shareUrl(encodeShare({ name: "", from: clip($("shFrom").value, 60), msg: clip($("shMsg").value, 300),
-      days: [{ dow: -1, name: w.name, type: w.type, items: w.items.map(cleanItem) }] }));
+    $("shLink").value = shareUrl(encodeShare({ days: [{ dow: -1, type: w.type, items: w.items.map(cleanItem) }] }));
+    $("shNote").textContent = leftOut([{ items: w.items }]) || "Links include exercises, sets, reps, weight and RPE.";
   }
   function openShare(w) {
     sharing = w;
     $("shTitle").textContent = w.name;
-    $("shFrom").value = prefs.from || "";
-    $("shMsg").value = "";
     $("shSend").hidden = typeof navigator.share !== "function";
     updateShareLink();
     shareDlg.showModal();
   }
-  $("shFrom").addEventListener("input", () => { prefs.from = $("shFrom").value.trim(); savePrefs(); updateShareLink(); });
-  $("shMsg").addEventListener("input", updateShareLink);
   $("shClose").addEventListener("click", () => shareDlg.close());
   $("shLink").addEventListener("focus", e => e.target.select());
   $("shCopy").addEventListener("click", () => copyLink($("shLink")));
@@ -985,6 +1030,7 @@
       $("rcDateLabel").textContent = p.weeks > 1 ? "Start the week of (runs for " + p.weeks + " weeks)" : "Start the week of";
     }
     [$("rcDay"), $("rcLib"), $("rcDate").parentElement, $("rcTrust")].forEach(el => { el.hidden = previewOnly; });
+    $("rcSkip").hidden = false;
     if (!previewOnly && mine) {
       $("rcDate").parentElement.hidden = true;
       const older = p.rev < mine.rev, same = p.rev === mine.rev;
@@ -1062,7 +1108,7 @@
     }).filter(Boolean);
     if (!list.length) return null;
     return { id: s.id, name: clip(s.name, 100) || "Training plan", from: clip(s.from, 60), msg: clip(s.msg, 300), start: s.start,
-      weeks: Math.min(Math.max(Number(s.weeks) || 1, 1), MAX_WEEKS), rev: Number.isFinite(s.rev) ? s.rev : 0, days: list };
+      weeks: Math.min(Math.max(Number(s.weeks) || 1, 1), MAX_WEEKS), rev: Number.isFinite(s.rev) ? s.rev : 0, days: list, preset: cleanPreset(s.preset) };
   };
   const cleanList = (v, fn) => Array.isArray(v) ? v.map(fn).filter(Boolean) : [];
 
@@ -1417,7 +1463,7 @@
   function followPlan(p, startKey) {
     const list = p.days.filter(d => d.dow >= 0);
     const i = subs.findIndex(s => s.id === p.id);
-    const row = cleanSub({ id: p.id, name: p.name, from: p.from, msg: p.msg, weeks: p.weeks, rev: p.rev, start: i >= 0 ? subs[i].start : startKey, days: list });
+    const row = cleanSub({ id: p.id, name: p.name, preset: p.preset, weeks: p.weeks, rev: p.rev, start: i >= 0 ? subs[i].start : startKey, days: list });
     if (!row) return null;
     if (i >= 0) subs[i] = row; else subs.push(row);
     delete gone[row.id]; store.set("gone", gone);
@@ -1523,12 +1569,119 @@
 
   // ---------- Share page ----------
   // Every link holds a full copy of the plan, so each person keeps their own and logs privately
+  // Share images are drawn on a canvas in fixed colors, so they look the same in any theme
+  const IMG = { w: 1080, pad: 72, bg: "#15181c", fg: "#f2f4f6", muted: "#9aa3ad", line: "#30353b", accent: "#ec5a4e" };
+  const TYPE_RGB = { lifting: "#c8352b", cardio: "#2f8f5b", hiit: "#df6e1f", mobility: "#6f7c89", core: "#c9960f", other: "#6f7c89" };
+  const FONT_D = '"Big Shoulders Display", "Arial Narrow", Impact, sans-serif', FONT_B = '"Public Sans", system-ui, sans-serif', FONT_M = '"JetBrains Mono", ui-monospace, Consolas, monospace';
+  function wrapLines(ctx, text, width) {
+    const lines = [];
+    let line = "";
+    String(text).split(/\s+/).forEach(word => {
+      const next = line ? line + " " + word : word;
+      if (line && ctx.measureText(next).width > width) { lines.push(line); line = word; } else line = next;
+    });
+    if (line) lines.push(line);
+    return lines;
+  }
+  function paintCard(ctx, c, draw) {
+    const inner = IMG.w - IMG.pad * 2;
+    let y = IMG.pad + 8;
+    const text = (t, font, color, x, yy, align) => { if (draw) { ctx.font = font; ctx.fillStyle = color; ctx.textAlign = align || "left"; ctx.fillText(t, x, yy); } };
+    if (draw) { ctx.fillStyle = IMG.bg; ctx.fillRect(0, 0, IMG.w, ctx.canvas.height); ctx.fillStyle = IMG.accent; ctx.fillRect(0, 0, IMG.w, 14); }
+    ctx.textBaseline = "alphabetic";
+    y += 26;
+    text(c.eyebrow.toUpperCase(), "600 26px " + FONT_B, IMG.muted, IMG.pad, y);
+    ctx.font = "800 104px " + FONT_D;
+    wrapLines(ctx, c.title.toUpperCase(), inner).slice(0, 3).forEach(l => { y += 104; text(l, "800 104px " + FONT_D, IMG.fg, IMG.pad, y); });
+    if (c.line) {
+      ctx.font = "400 30px " + FONT_B;
+      y += 20;
+      wrapLines(ctx, c.line, inner).forEach(l => { y += 42; text(l, "400 30px " + FONT_B, IMG.muted, IMG.pad, y); });
+    }
+    if (c.stats) {
+      y += 88;
+      const col = inner / c.stats.length;
+      c.stats.forEach(([v, k], i) => {
+        text(String(v), "800 84px " + FONT_D, IMG.fg, IMG.pad + i * col, y);
+        text(k, "400 26px " + FONT_B, IMG.muted, IMG.pad + i * col, y + 40);
+      });
+      y += 56;
+    }
+    if (c.days) {
+      y += 44;
+      const gap = 10, size = (inner - gap * 6) / 7;
+      DOW.forEach((n, i) => {
+        const d = c.days.find(x => x.dow === i), x = IMG.pad + i * (size + gap);
+        if (draw) {
+          ctx.beginPath(); ctx.roundRect(x, y, size, size, 12);
+          if (d) { ctx.fillStyle = TYPE_RGB[d.type] || TYPE_RGB.other; ctx.fill(); } else { ctx.strokeStyle = IMG.line; ctx.lineWidth = 2; ctx.stroke(); }
+        }
+        text(n.slice(0, 1), "700 24px " + FONT_B, d ? "#ffffff" : IMG.muted, x + size / 2, y + 40, "center");
+        text(d ? String(d.items.length) : "–", "800 52px " + FONT_D, d ? "#ffffff" : IMG.muted, x + size / 2, y + 100, "center");
+      });
+      y += size + 12;
+      c.days.forEach(d => {
+        y += 62;
+        text(d.dow >= 0 ? DOW[d.dow].toUpperCase() : "WORKOUT", "800 38px " + FONT_D, IMG.accent, IMG.pad, y);
+        d.items.slice(0, 8).forEach(it => {
+          y += 42;
+          const rx = (it.sets ? it.sets + " × " : "") + (it.reps || "") + (it.weight ? " @ " + it.weight : "");
+          text(it.name.length > 38 ? it.name.slice(0, 37) + "…" : it.name, "500 29px " + FONT_B, IMG.fg, IMG.pad, y);
+          text(rx, "500 26px " + FONT_M, IMG.muted, IMG.w - IMG.pad, y, "right");
+        });
+        if (d.items.length > 8) { y += 38; text("+ " + (d.items.length - 8) + " more", "400 25px " + FONT_B, IMG.muted, IMG.pad, y); }
+      });
+    }
+    if (c.rows) {
+      y += 30;
+      c.rows.forEach(([a, b]) => {
+        y += 54;
+        text(a.length > 34 ? a.slice(0, 33) + "…" : a, "500 32px " + FONT_B, IMG.fg, IMG.pad, y);
+        text(b, "700 30px " + FONT_M, IMG.fg, IMG.w - IMG.pad, y, "right");
+      });
+    }
+    y += 76;
+    text("THELIFT", "800 40px " + FONT_D, IMG.fg, IMG.pad, y);
+    return y + IMG.pad - 20;
+  }
+  async function cardBlob(card) {
+    try { await Promise.all(["800 104px " + FONT_D, "400 30px " + FONT_B, "500 26px " + FONT_M].map(f => document.fonts.load(f))); } catch (e) {}
+    const canvas = document.createElement("canvas");
+    canvas.width = IMG.w; canvas.height = 10;
+    const height = paintCard(canvas.getContext("2d"), card, false);
+    canvas.height = Math.ceil(height);
+    paintCard(canvas.getContext("2d"), card, true);
+    return new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+  }
+  function saveImage(blob, title) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "thelift-" + title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) + ".png";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  function copyCardImage(card) {
+    // Clipboard needs the promise right away, so the click still counts as your action
+    const blob = cardBlob(card);
+    const copied = typeof ClipboardItem === "function" && navigator.clipboard && navigator.clipboard.write
+      ? navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]) : Promise.reject(new Error("unsupported"));
+    copied.then(() => toast("Image copied")).catch(async () => {
+      const b = await blob;
+      if (b) { saveImage(b, card.title); toast("Your browser can't copy images, so it was saved instead."); } else toast("The image couldn't be made.");
+    });
+  }
+  function pngButton(getCard) {
+    const b = document.createElement("button");
+    b.className = "btn poster-btn alt"; b.textContent = "Copy as PNG";
+    b.addEventListener("click", () => copyCardImage(getCard()));
+    return b;
+  }
+
   function revealLink(link) {
     $("shareLink").value = link;
     $("shareResult").hidden = false;
     copyLink($("shareLink"));
   }
-  function posterActions(getLink, title) {
+  function posterActions(getLink, title, getCard) {
     const row = document.createElement("div");
     row.className = "poster-acts";
     const copy = document.createElement("button");
@@ -1541,10 +1694,11 @@
       send.addEventListener("click", () => { const l = getLink(); if (l) navigator.share({ title, url: l }).catch(() => {}); });
       row.appendChild(send);
     }
+    row.appendChild(pngButton(getCard));
     return row;
   }
   // The week is drawn as seven blocks, colored by workout type
-  function poster(eyebrow, title, line, planDays, getLink) {
+  function poster(eyebrow, title, line, planDays, getLink, singleDay) {
     const c = document.createElement("article");
     c.className = "poster";
     const week = planDays ? '<div class="poster-week">' + DOW.map((n, i) => {
@@ -1552,7 +1706,7 @@
       return '<div class="poster-day' + (d ? "" : " off") + '"' + (d ? ' style="background:' + typeOf(d.type).color + '"' : "") + '><span>' + n.slice(0, 1) + "</span><b>" + (d ? d.items.length : "–") + "</b></div>";
     }).join("") + "</div>" : "";
     c.innerHTML = '<div class="label">' + esc(eyebrow) + "</div><h3>" + esc(title) + "</h3>" + week + "<p>" + esc(line) + "</p>";
-    c.appendChild(posterActions(getLink, title));
+    c.appendChild(posterActions(getLink, title, () => ({ eyebrow, title, line, days: planDays || (singleDay ? [singleDay] : null) })));
     return c;
   }
   const countLine = (planDays, weeks, from) => {
@@ -1582,6 +1736,10 @@
       try { await navigator.clipboard.writeText(text); toast("Season card copied"); } catch (e) { $("shareLink").value = text; $("shareResult").hidden = false; $("shareLink").focus(); $("shareLink").select(); toast("Copy the selected text"); }
     });
     const row = document.createElement("div"); row.className = "poster-acts"; row.appendChild(b);
+    row.appendChild(pngButton(() => ({ eyebrow: "Season card", title: s.name, line: s.goal ? "Goal: " + s.goal : "",
+      stats: [[s.sessions, "sessions"], [s.sets, "sets"], [s.volume.toLocaleString(), "lb moved"]],
+      rows: s.bests.map(x => [x.ex, x.w + " " + x.unit + " × " + x.r]) })));
+    row.lastChild.disabled = !s.sessions;
     el.appendChild(row);
   }
 
@@ -1589,11 +1747,11 @@
     renderSeasonCard();
     const wrap = $("sharePlans"); wrap.innerHTML = "";
     const draft = usedDays();
-    if (draft.length) wrap.appendChild(poster("In your builder", clip(plan.name, 100) || "Training plan", countLine(draft, plan.weeks, prefs.from), draft, () => { makeLink(); return $("bLink").value; }));
+    if (draft.length) wrap.appendChild(poster("In your builder", clip(plan.name, 100) || "Training plan", countLine(draft, plan.weeks, ""), draft, () => makeLink() ? $("bLink").value : ""));
     subs.forEach(s => wrap.appendChild(poster("You follow", s.name, countLine(s.days, s.weeks, s.from), s.days, () => shareUrl(encodeShare(s)))));
     library.slice(0, 12).forEach(w => {
       const t = typeOf(w.type);
-      wrap.appendChild(poster(t.name + " workout", w.name, w.items.length + " exercises" + (w.from ? " · from " + w.from : ""), null, () => shareUrl(encodeShare({ name: "", from: clip(prefs.from, 60), msg: "", days: [{ dow: -1, name: w.name, type: w.type, items: w.items.map(cleanItem) }] }))));
+      wrap.appendChild(poster(t.name + " workout", w.name, w.items.length + " exercises" + (w.from ? " · from " + w.from : ""), null, () => w.items.some(shareable) ? shareUrl(encodeShare({ days: [{ dow: -1, type: w.type, items: w.items.map(cleanItem) }] })) : (toast("Links can only include exercises from the list."), ""), { dow: -1, type: w.type, items: w.items }));
     });
     if (!wrap.children.length) wrap.innerHTML = '<div class="empty"><p>Nothing to share yet. Build a plan or load a program, and it will show up here.</p></div>';
   }
@@ -1683,18 +1841,18 @@
       week[i] = { name: clip(x.name, 100), type: cleanType(x.type), items: x.items.slice(0, MAX_ITEMS).filter(Boolean).map(cleanItem) };
     });
     const w = d && Number(d.weeks);
-    return { id: toId(d && d.id), rev: Number.isFinite(d && d.rev) ? d.rev : 0, edited: !!(d && d.edited), name: clip(d && d.name, 100), msg: clip(d && d.msg, 300), weeks: w >= 1 && w <= MAX_WEEKS ? w : 1, week };
+    return { id: toId(d && d.id), rev: Number.isFinite(d && d.rev) ? d.rev : 0, edited: !!(d && d.edited), preset: cleanPreset(d && d.preset), name: clip(d && d.name, 100), weeks: w >= 1 && w <= MAX_WEEKS ? w : 1, week };
   }
   let plan = loadDraft(), bDay = dowMon(new Date()), pickGroup = "chest", pickQuery = "";
   const saveDraft = () => store.set("draft", plan);
   const usedDays = () => plan.week.map((d, i) => ({ dow: i, name: d.name.trim(), type: d.type, items: d.items.filter(x => x.name.trim()) })).filter(d => d.items.length);
 
-  function changed() { plan.edited = true; saveDraft(); $("bResult").hidden = true; renderBuildBar(); }
+  function changed() { plan.edited = true; plan.preset = null; saveDraft(); $("bResult").hidden = true; renderBuildBar(); }
 
   // One level of undo for actions that replace or remove work
   let undoState = null;
   function snapshot() { undoState = JSON.stringify(plan); $("bUndo").disabled = false; }
-  function syncPlanFields() { $("pName").value = plan.name; $("pMsg").value = plan.msg; $("pWeeks").value = String(plan.weeks); }
+  function syncPlanFields() { $("pName").value = plan.name; $("pWeeks").value = String(plan.weeks); }
 
   function renderBuildWeek() {
     const wrap = $("bWeek"); wrap.innerHTML = "";
@@ -1828,9 +1986,10 @@
     plan.id = ""; plan.rev = 0;
     plan.name = phase ? p.name + " · " + phase.label : p.name;
     plan.weeks = phase ? 1 : p.weeks || 1;
-    plan.msg = "";
     bDay = week.findIndex(d => d.items.length);
-    syncPlanFields(); changed(); renderBuild();
+    syncPlanFields(); changed();
+    plan.preset = { i: PRESETS.indexOf(p), ph: phase ? p.phases.indexOf(phase) + 1 : 0 };
+    saveDraft(); renderBuild();
     $("sheetDay").scrollIntoView({ block: "center" });
     toast("Loaded " + plan.name);
   }
@@ -1868,16 +2027,15 @@
   function renderBuild() { renderBuildWeek(); renderPicker(); renderSheet(); renderBuildBar(); }
 
   function planForShare() {
-    return { id: plan.id, rev: plan.rev, name: clip(plan.name, 100), from: clip(prefs.from, 60), msg: clip(plan.msg, 300), weeks: plan.weeks,
+    return { id: plan.id, rev: plan.rev, preset: plan.preset, name: clip(plan.name, 100), from: "", msg: "", weeks: plan.weeks,
       days: usedDays().map(d => ({ dow: d.dow, name: clip(d.name, 100), type: d.type, items: d.items.map(cleanItem).filter(i => i.name) })) };
   }
 
   syncPlanFields();
-  $("pFrom").value = prefs.from || "";
-  $("pWeeks").addEventListener("change", e => { plan.weeks = Number(e.target.value); changed(); });
-  $("pName").addEventListener("input", e => { plan.name = e.target.value; changed(); });
-  $("pFrom").addEventListener("input", e => { prefs.from = e.target.value.trim(); savePrefs(); $("bResult").hidden = true; });
-  $("pMsg").addEventListener("input", e => { plan.msg = e.target.value; changed(); });
+  // The plan's name and length don't change its exercises, so a program stays a program
+  const keepingProgram = fn => { const p = plan.preset; fn(); plan.preset = p; saveDraft(); };
+  $("pWeeks").addEventListener("change", e => keepingProgram(() => { plan.weeks = Number(e.target.value); changed(); }));
+  $("pName").addEventListener("input", e => keepingProgram(() => { plan.name = e.target.value; plan.edited = false; saveDraft(); }));
   $("dName").addEventListener("input", e => { plan.week[bDay].name = e.target.value; changed(); });
   $("pickSearch").addEventListener("input", e => { pickQuery = e.target.value.trim(); renderPicker(); });
   $("bLink").addEventListener("focus", e => e.target.select());
@@ -1909,19 +2067,20 @@
     }
     b.classList.remove("armed"); b.textContent = "Start over";
     snapshot();
-    plan = { id: "", rev: 0, edited: false, name: "", msg: "", weeks: 1, week: emptyWeek() };
+    plan = { id: "", rev: 0, edited: false, preset: null, name: "", weeks: 1, week: emptyWeek() };
     syncPlanFields(); changed(); renderBuild();
   });
 
   function makeLink() {
     // A plan keeps its ID when edited, so people following it can update from a newer link
-    if (!plan.id) plan.id = uid();
-    if (plan.edited || !plan.rev) { plan.rev = Math.max(plan.rev + 1, Math.floor(Date.now() / 60000)); plan.edited = false; saveDraft(); }
+    if (!usedDays().some(d => d.items.some(shareable))) { toast("Links can only include exercises from the list."); return false; }
+    if (!/^p[0-9a-z]{1,7}$/.test(plan.id || "")) plan.id = randomPlanId();
+    if (plan.edited || !plan.rev) { plan.rev = ((plan.rev & 65535) + 1) & 65535 || 1; plan.edited = false; saveDraft(); }
     const code = encodeShare(planForShare());
     if (code.length > MAX_CODE) { toast("This plan is too long for one link. Shorten the notes."); return false; }
     const link = shareUrl(code);
     $("bLink").value = link;
-    $("bLinkNote").textContent = link.length + " characters. Anyone with this link can see the plan. Later edits won't update it, so send a new link after changes.";
+    $("bLinkNote").textContent = [link.length + " characters.", plan.preset ? "" : leftOut(usedDays()), "Anyone with this link can see the plan. Send a new link after changes."].filter(Boolean).join(" ");
     $("bResult").hidden = false;
     return true;
   }
@@ -1931,8 +2090,10 @@
     if (makeLink()) navigator.share({ title: clip(plan.name, 100) || "Training plan", url: $("bLink").value }).catch(() => {});
   });
   $("bPreview").addEventListener("click", () => {
-    const p = planForShare();
-    showPlan(Object.assign(p, { name: p.name || "Training plan", id: p.id || "preview" }), true);
+    // Decoding the real link shows exactly what the other person will get
+    const p = decodeShare(encodeShare(planForShare()));
+    if (!p) { toast("Links can only include exercises from the list."); return; }
+    showPlan(p, true);
   });
   $("bSave").addEventListener("click", () => {
     const p = planForShare();

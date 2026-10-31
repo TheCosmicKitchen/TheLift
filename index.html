@@ -518,9 +518,7 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
     </div>
 
     <section class="setup bplan" aria-label="Plan details">
-      <label class="field"><span>Plan name</span><input type="text" id="pName" maxlength="100" placeholder="e.g. Week 1 strength" autocomplete="off"></label>
-      <label class="field"><span>From (optional)</span><input type="text" id="pFrom" maxlength="60" placeholder="Your name" autocomplete="off"></label>
-      <label class="field"><span>Message (optional)</span><input type="text" id="pMsg" maxlength="300" placeholder="e.g. Rest 2 minutes between big lifts" autocomplete="off"></label>
+      <label class="field"><span>Plan name (just for you)</span><input type="text" id="pName" maxlength="100" placeholder="e.g. Week 1 strength" autocomplete="off"></label>
       <label class="field"><span>Repeat</span><select class="binput" id="pWeeks">
         <option value="1">1 week</option><option value="2">2 weeks</option><option value="3">3 weeks</option><option value="4">4 weeks</option>
         <option value="6">6 weeks</option><option value="8">8 weeks</option><option value="12">12 weeks</option>
@@ -626,11 +624,9 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
       </div>
       <button type="button" class="btn small ghost" id="shClose" aria-label="Close">Close</button>
     </div>
-    <label class="field"><span>From (optional)</span><input type="text" id="shFrom" maxlength="60" placeholder="Your name" autocomplete="off"></label>
-    <label class="field"><span>Message (optional)</span><input type="text" id="shMsg" maxlength="300" placeholder="e.g. Go heavy on the squats this week" autocomplete="off"></label>
     <label class="field"><span>Link</span><input type="text" id="shLink" readonly></label>
     <div class="bfoot">
-      <span class="hint">Anyone with this link can see the workout. Later edits won't update it, so send a new link after changes.</span>
+      <span class="hint" id="shNote"></span>
       <div class="acts">
         <button type="button" class="btn" id="shSend" hidden>Send</button>
         <button type="button" class="btn primary" id="shCopy">Copy link</button>
@@ -649,7 +645,7 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
     <ul class="rc-list" id="rcItems"></ul>
     <label class="field"><span id="rcDateLabel">Do it on</span><input type="date" id="rcDate"></label>
     <p class="from-note" id="rcFollowing" hidden></p>
-    <p class="hint" id="rcTrust">Sender names aren't verified. Only add plans from people you trust.</p>
+    <p class="hint" id="rcTrust">Links don't show who sent them. Only add plans from people you trust.</p>
     <div class="bfoot">
       <button type="button" class="btn ghost" id="rcSkip">Not now</button>
       <div class="acts">
