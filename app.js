@@ -661,7 +661,7 @@
     $("title").innerHTML = DOW[s.dow] + '<span class="split">' + ([liftLabel(s.liftType), cardioLabel(s.cardioType)].filter(Boolean).join(" + ") || "Rest day") + "</span>";
     $("sugGrid").hidden = !s.lift && !s.cardio;
     $("sugGrid").classList.toggle("single", !s.lift || !s.cardio);
-    renderSetup(); renderWeek(); renderLift(s); renderCardio(s); renderMine(); renderLibrary();
+    renderSheetBar(); renderSetup(); renderWeek(); renderLift(s); renderCardio(s); renderMine(); renderLibrary();
   }
 
   function swap(kind) {
@@ -1045,7 +1045,7 @@
     const ex = clip(l.ex, 100);
     if (!ex) return null;
     return { id: toId(l.id) || uid(), t: Number.isFinite(l.t) ? l.t : Date.now(), date: l.date, ex, unit: l.unit === "kg" ? "kg" : "lb", plan: toId(l.plan),
-      sets: l.sets.slice(0, 30).filter(s => s && typeof s === "object").map(s => ({ w: clip(s.w, 12), r: clip(s.r, 20) })), note: clip(l.note, 300) };
+      sets: l.sets.slice(0, 30).filter(s => s && typeof s === "object").map(s => ({ w: clip(s.w, 12), r: clip(s.r, 20) })), note: clip(l.note, 300), sheet: Number.isFinite(l.sheet) ? l.sheet : 0 };
   };
   const cleanSeason = s => {
     if (!s || typeof s !== "object" || !DATE_KEY.test(s.start)) return null;
@@ -1307,7 +1307,7 @@
     addLogSet(prev ? { w: prev.querySelector(".l-w").value, r: prev.querySelector(".l-r").value } : {});
   });
   $("lCancel").addEventListener("click", () => logDlg.close());
-  $("lSave").addEventListener("click", () => {
+  const saveLog = () => {
     const sets = [...$("lSets").children].map(r => ({ w: clip(r.querySelector(".l-w").value, 12), r: clip(r.querySelector(".l-r").value, 20) })).filter(s => s.w || s.r);
     if (!sets.length) { toast("Add at least one set."); return; }
     const { key, log, existing } = logging;
@@ -1317,12 +1317,91 @@
     if (log.done) { const done = store.get("done:" + key, {}); done[log.done] = true; store.set("done:" + key, done); }
     logDlg.close(); render(); renderProgress();
     toast("Logged " + log.ex);
-  });
+    return row;
+  };
+  $("lSave").addEventListener("click", saveLog);
+  $("lSaveCopy").addEventListener("click", () => { const row = saveLog(); if (row) copyForSheet([logs.find(l => l.id === row.id)]); });
   $("lDelete").addEventListener("click", () => {
     const id = logging.existing.id;
     logs = logs.filter(l => l.id !== id); markGone(id); saveLogs();
     logDlg.close(); render(); renderProgress(); toast("Log removed");
   });
+
+  // ---------- Copy for The Truer Path ----------
+  // Rows paste into the sheet's Date, Exercise, Sets, Reps and Weight columns. The sheet
+  // works out everything else, and it tracks weight in pounds.
+  const SHEET_NAMES = {
+    "Barbell Bench Press": "Bench Press", "Back Squat": "Squat", "Conventional Deadlift": "Deadlift", "Standing Overhead Press": "Overhead Press",
+    "Incline Barbell Press": "Incline Bench Press", "Barbell Bent-Over Row": "Bent Over Row", "Barbell Hip Thrust": "Hip Thrust",
+    "Incline Dumbbell Press": "Incline Dumbbell Bench Press", "Single-Arm Dumbbell Row": "Dumbbell Row", "Dumbbell Step-up": "Step-Up",
+    "Dumbbell Lateral Raise": "Lateral Raise", "Nordic Hamstring Curl": "Nordic Curl", "Incline Dumbbell Curl": "Incline Curl",
+    "EZ-Bar Skull Crusher": "Skull Crusher", "Pec Deck": "Pec Fly", "Reverse Pec Deck": "Rear Delt Fly Machine",
+    "Seated Dumbbell Shoulder Press": "Dumbbell Shoulder Press", "Trap-Bar Deadlift": "Hex Bar Deadlift", "Dumbbell Kickback": "Tricep Kickback",
+    "Standing Calf Raise": "Calf Raise", "Seated Leg Curl": "Leg Curl", "Machine Chest Press": "Chest Press", "Barbell Shrug": "Shrug",
+    "Cable Crossover": "Cable Cross", "Single Arm Cable Crossover": "Single Arm Cable Cross", "Neutral-Grip Pull-Up": "Pull-Up (Hammer Grip)",
+    "Pull-ups": "Pull-Up", "Chin-ups": "Chin-Up", "Push-ups": "Push-Up", "Weighted Dips": "Weighted Dip", "Weighted Pull-ups": "Weighted Pull-Up",
+    "EZ-Bar Curl": "EZ Bar Curl", "Rope Triceps Pushdown": "Tricep Pushdown"
+  };
+  // A leading = + - or @ would make a spreadsheet run the text as a formula
+  const sheetName = ex => (SHEET_NAMES[ex] || ex).replace(/^[=+\-@'\s]+/, "");
+  const sheetDate = k => { const [y, m, d] = k.split("-"); return Number(m) + "/" + Number(d) + "/" + y; };
+  const sheetReps = r => /^\d+(\.\d+)?$/.test(r) ? r : (/^\d+\s*\/\s*(side|leg)$/.test(r) ? r.match(/^\d+/)[0] : "");
+  const sheetWeight = (w, unit) => {
+    if (!/^\d+(\.\d+)?$/.test(w)) return "";
+    return unit === "kg" ? String(Math.round(toLb(parseFloat(w), "kg") * 10) / 10) : w;
+  };
+  function sheetRows(list) {
+    const rows = [];
+    list.slice().sort((a, b) => a.date.localeCompare(b.date) || a.t - b.t).forEach(l => {
+      const name = sheetName(l.ex);
+      if (!name) return;
+      let prev = null;
+      l.sets.forEach(s => {
+        const reps = sheetReps(s.r), weight = sheetWeight(s.w, l.unit);
+        if (!reps) return; // Timed work like "30 min" would break the sheet's math
+        if (prev && prev.reps === reps && prev.weight === weight) { prev.sets++; return; }
+        prev = { date: sheetDate(l.date), name, sets: 1, reps, weight };
+        rows.push(prev);
+      });
+    });
+    return rows;
+  }
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); return true; }
+    catch (e) {
+      const t = document.createElement("textarea");
+      t.value = text; document.body.appendChild(t); t.select();
+      let ok = false;
+      try { ok = document.execCommand("copy"); } catch (err) {}
+      t.remove();
+      return ok;
+    }
+  }
+  async function copyForSheet(list) {
+    const rows = sheetRows(list);
+    if (!rows.length) { toast("Nothing to copy. Timed cardio isn't added to the sheet."); return; }
+    const text = rows.map(r => [r.date, r.name, r.sets, r.reps, r.weight].join("\t")).join("\n");
+    if (!await copyText(text)) { toast("Your browser blocked copying. Try again."); return; }
+    const now = Date.now();
+    list.forEach(l => { l.sheet = now; });
+    saveLogs(); render(); renderProgress();
+    toast("Copied " + rows.length + " row" + (rows.length === 1 ? "" : "s") + ". Paste into the first empty Date cell.");
+  }
+  function renderSheetBar() {
+    const key = keyOf(current), todayLogs = logs.filter(l => l.date === key), fresh = todayLogs.filter(l => !l.sheet);
+    const bar = $("sheetBar");
+    bar.hidden = !todayLogs.length;
+    if (!todayLogs.length) return;
+    bar.innerHTML = "";
+    const text = document.createElement("span");
+    text.textContent = fresh.length ? fresh.length + " exercise" + (fresh.length === 1 ? "" : "s") + " ready for The Truer Path" : "Copied to The Truer Path";
+    bar.appendChild(text);
+    const b = document.createElement("button");
+    b.className = "btn small" + (fresh.length ? " primary" : "");
+    b.textContent = fresh.length ? "Copy for Truer Path" : "Copy again";
+    b.addEventListener("click", () => copyForSheet(fresh.length ? fresh : todayLogs));
+    bar.appendChild(b);
+  }
 
   // ---------- Followed plans ----------
   const fromKey = k => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d, 12); };
@@ -1413,8 +1492,9 @@
 
     const byDate = new Map();
     list.slice().sort((a, b) => b.date.localeCompare(a.date) || a.t - b.t).forEach(l => { if (!byDate.has(l.date)) byDate.set(l.date, []); byDate.get(l.date).push(l); });
-    $("logList").innerHTML = byDate.size ? [...byDate.entries()].slice(0, 30).map(([d, rows]) => '<li class="rc-day">' + esc(d) + "</li>" + rows.map(l => "<li><b>" + esc(l.ex) + (l.note ? "<small>" + esc(l.note) + "</small>" : "") + "</b><span>" + esc(fmtSets(l)) + "</span></li>").join("")).join("") : '<li class="hint">Nothing logged yet. Press Log on any exercise.</li>';
+    $("logList").innerHTML = byDate.size ? [...byDate.entries()].slice(0, 30).map(([d, rows]) => '<li class="rc-day rc-copy"><span>' + esc(d) + '</span><button class="btn small" data-date="' + esc(d) + '">Copy for Truer Path</button></li>' + rows.map(l => "<li><b>" + esc(l.ex) + (l.note ? "<small>" + esc(l.note) + "</small>" : "") + "</b><span>" + esc(fmtSets(l)) + "</span></li>").join("")).join("") : '<li class="hint">Nothing logged yet. Press Log on any exercise.</li>';
 
+    $("logList").querySelectorAll("[data-date]").forEach(b => b.addEventListener("click", () => copyForSheet(logs.filter(l => l.date === b.dataset.date))));
     const pl = $("planList"); pl.innerHTML = "";
     if (!subs.length) pl.innerHTML = '<p class="hint">Plans you follow from a link show up here.</p>';
     subs.forEach(s => {

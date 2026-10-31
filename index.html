@@ -276,6 +276,8 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
 .savebar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 8px; padding: 10px 12px; background: var(--surface); }
 .savebar.card-like { border-left-width: 1px; }
 .savebar .acts { display: flex; gap: 6px; flex-wrap: wrap; }
+.sheetbar { border-left-color: var(--z2); }
+.rc-list li.rc-copy { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .logline { grid-column: 2 / 4; display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--muted); padding-top: 2px; }
 .logline.logged span { color: var(--ink); font-weight: 600; }
 .lset { display: grid; grid-template-columns: 22px minmax(0,1fr) minmax(0,1fr) 34px; gap: 8px; align-items: end; }
@@ -372,6 +374,7 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
   </header>
 
   <nav class="week" id="week" aria-label="This week"></nav>
+  <div class="savebar sheetbar" id="sheetBar" role="status" hidden></div>
 
   <section class="setup" aria-label="Training setup">
     <div class="setup-row"><span class="label">Lifting split</span><div class="chips" id="progChips" role="group" aria-label="Lifting split"></div></div>
@@ -677,7 +680,8 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
       <button type="button" class="btn ghost danger" id="lDelete" hidden>Delete log</button>
       <div class="acts">
         <button type="button" class="btn" id="lCancel">Cancel</button>
-        <button type="button" class="btn primary" id="lSave">Save</button>
+        <button type="button" class="btn" id="lSave">Save</button>
+        <button type="button" class="btn primary" id="lSaveCopy">Save and copy</button>
       </div>
     </div>
   </div>

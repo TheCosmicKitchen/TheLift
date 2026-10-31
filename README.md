@@ -15,6 +15,7 @@ A daily training page: a lifting session and a cardio workout for every day, plu
 - **Program starters:** load a simplified version of a proven program, such as Couch to 5K, 5/3/1, PHUL or a sweet spot cycling base, then edit it and share it. Programs live in `presets.js`.
 - **Share links:** copy a link in one click and send a full plan or a single saved workout. Whoever opens the link sees a preview and chooses when to add it. No accounts, and the plan travels inside the link.
 - **Logging:** press Log on any exercise to record weight and reps set by set, with last time shown.
+- **Copy to The Truer Path:** copy a day's logs as rows and paste them into the first empty Date cell of your tab. Names match the sheet, and kilograms convert to pounds.
 - **Following plans:** open a plan link and press Follow. Everyone following the same link logs their own results in their own file. A newer link for the same plan updates it, and logs stay.
 - **Share page:** poster-style cards for your plan, followed plans and saved workouts, plus a season card you can copy as text. Each person keeps their own copy.
 - **Seasons and PRs:** the Progress page shows sessions, volume, personal records and history, for all time or one season.
