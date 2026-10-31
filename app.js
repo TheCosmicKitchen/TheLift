@@ -97,27 +97,27 @@
 
   // Exercise pools by movement pattern: "Name|coaching cue"
   const POOL_SRC = {
-    hpush: ["Barbell Bench Press|Shoulder blades pinned, bar to lower chest, feet driving into the floor.", "Incline Barbell Press|Grip a touch narrower than flat bench. Touch the upper chest.", "Dumbbell Bench Press|Let the dumbbells sink to chest level, press up and slightly in.", "Incline Dumbbell Press|30° bench. Lower for a slow three-count.", "Close-Grip Bench Press|Hands shoulder-width, elbows tucked, touch low on the chest.", "Weighted Dips|Slight forward lean, shoulders just below the elbows at the bottom.", "Machine Chest Press|Seat height so the handles line up with mid-chest."],
-    vpush: ["Standing Overhead Press|Squeeze glutes, press straight up, head through at the top.", "Seated Dumbbell Shoulder Press|Stop just short of lockout to keep tension.", "Half-Kneeling Landmine Press|Press up and slightly across, ribs down.", "Arnold Press|Rotate the palms as you press. Smooth, no bounce.", "Push Press|Short dip, drive with the legs, finish with the arms."],
-    hpull: ["Barbell Bent-Over Row|Hinge to about 45°. Row to the belly button.", "Chest-Supported Row|Pull elbows toward your hips, pause at the top.", "Single-Arm Dumbbell Row|Let the shoulder stretch forward at the bottom.", "Seal Row|Chest stays on the bench the whole time.", "Seated Cable Row|Sit tall, pull to the stomach, don't rock.", "Pendlay Row|Each rep starts dead on the floor. Explode up."],
-    vpull: ["Pull-ups|Start from a dead hang, chest to the bar.", "Chin-ups|Full range. Stop one rep before your form slips.", "Lat Pulldown|Drive elbows down into your back pockets.", "Neutral-Grip Pulldown|Lean back slightly, pull to the upper chest.", "Weighted Pull-ups|Add load only once you own 8 clean bodyweight reps."],
-    squat: ["Back Squat|Spread the floor with your feet. Hips and chest rise together.", "Front Squat|Elbows high, stay upright, sit between your heels.", "Safety-Bar Squat|Stay tall and push the handles down.", "Hack Squat|Feet mid-platform, go as deep as your hips allow.", "Leg Press|Lower until the hips start to tuck, then drive.", "Goblet Squat|Elbows inside the knees at the bottom."],
-    hinge: ["Romanian Deadlift|Push hips back until you feel the hamstrings, then stand tall.", "Barbell Hip Thrust|Chin tucked, ribs down, squeeze hard at the top.", "Good Morning|Soft knees, hips back, flat back.", "Single-Leg Romanian Deadlift|Reach the back heel toward the wall behind you.", "Trap-Bar Deadlift|Sit a little lower than a deadlift. Drive straight up.", "Conventional Deadlift|Push the floor away. Bar stays in contact with the legs."],
+    hpush: ["Barbell Bench Press|Shoulder blades pinned, bar to lower chest, feet driving into the floor.", "Incline Barbell Press|Grip a touch narrower than flat bench. Touch the upper chest.", "Dumbbell Bench Press|Let the dumbbells sink to chest level, press up and slightly in.", "Incline Dumbbell Press|30° bench. Lower for a slow three-count.", "Close-Grip Bench Press|Hands shoulder-width, elbows tucked, touch low on the chest.", "Weighted Dips|Slight forward lean, shoulders just below the elbows at the bottom.", "Machine Chest Press|Seat height so the handles line up with mid-chest.", "Wide Grip Bench Press|Hands wider than usual, shorter range, shoulders pinned.", "Decline Dumbbell Bench Press|Slight decline. Press up and together over the lower chest."],
+    vpush: ["Standing Overhead Press|Squeeze glutes, press straight up, head through at the top.", "Seated Dumbbell Shoulder Press|Stop just short of lockout to keep tension.", "Half-Kneeling Landmine Press|Press up and slightly across, ribs down.", "Arnold Press|Rotate the palms as you press. Smooth, no bounce.", "Push Press|Short dip, drive with the legs, finish with the arms.", "Machine Shoulder Press|Seat so the handles start at shoulder height.", "Landmine Press|Press up and away, ribs down."],
+    hpull: ["Barbell Bent-Over Row|Hinge to about 45°. Row to the belly button.", "Chest-Supported Row|Pull elbows toward your hips, pause at the top.", "Single-Arm Dumbbell Row|Let the shoulder stretch forward at the bottom.", "Seal Row|Chest stays on the bench the whole time.", "Seated Cable Row|Sit tall, pull to the stomach, don't rock.", "Pendlay Row|Each rep starts dead on the floor. Explode up.", "Close Grip Row|Keep the chest tall and pull the handle to your stomach.", "Wide Grip Row|Elbows out, pull to the lower chest.", "Machine Row|Chest on the pad, drive the elbows back.", "Landmine Row|Hinge over the bar and pull it to your hip.", "Three Point Row|One hand braced on a bench, row to the hip."],
+    vpull: ["Pull-ups|Start from a dead hang, chest to the bar.", "Chin-ups|Full range. Stop one rep before your form slips.", "Lat Pulldown|Drive elbows down into your back pockets.", "Neutral-Grip Pulldown|Lean back slightly, pull to the upper chest.", "Weighted Pull-ups|Add load only once you own 8 clean bodyweight reps.", "Close Grip Lat Pulldown|Lean back slightly and pull to the upper chest.", "Wide Grip Lat Pulldown|Lead with the elbows, don't swing.", "Underhand Lat Pulldown|Palms facing you, elbows drive to the ribs.", "Single Arm Lat Pulldown|Reach long at the top, then drive the elbow down.", "Assisted Pull-Up|Use just enough help to control every rep."],
+    squat: ["Back Squat|Spread the floor with your feet. Hips and chest rise together.", "Front Squat|Elbows high, stay upright, sit between your heels.", "Safety-Bar Squat|Stay tall and push the handles down.", "Hack Squat|Feet mid-platform, go as deep as your hips allow.", "Leg Press|Lower until the hips start to tuck, then drive.", "Goblet Squat|Elbows inside the knees at the bottom.", "Pause Squat|Hold two seconds at the bottom, then drive up.", "Zercher Squat|Bar in the crook of the elbows, stay tall.", "Sumo Squat|Wide stance, toes out, sit straight down.", "Elevated Heel Squat|Heels raised, knees travel forward, torso upright.", "Hex Bar Squat|Sit deep in the bar and stand straight up."],
+    hinge: ["Romanian Deadlift|Push hips back until you feel the hamstrings, then stand tall.", "Barbell Hip Thrust|Chin tucked, ribs down, squeeze hard at the top.", "Good Morning|Soft knees, hips back, flat back.", "Single-Leg Romanian Deadlift|Reach the back heel toward the wall behind you.", "Trap-Bar Deadlift|Sit a little lower than a deadlift. Drive straight up.", "Conventional Deadlift|Push the floor away. Bar stays in contact with the legs.", "Kettlebell Romanian Deadlift|Slide the bell down the shins, hips back.", "Cable Pull Through|Face away, hinge, and snap the hips forward.", "Back Extension|Hinge at the hips and stop when your body is straight.", "Kettlebell Swing|Snap the hips. The arms only guide the bell."],
     deadlift: ["Conventional Deadlift|Push the floor away. Bar stays in contact with the legs.", "Trap-Bar Deadlift|Sit a little lower than a deadlift. Drive straight up.", "Sumo Deadlift|Knees out, chest up, wedge yourself into the bar.", "Rack Pull (below knee)|Lock out with the glutes, not by leaning back."],
-    lunge: ["Bulgarian Split Squat|Most of the weight on the front foot.", "Walking Lunge|Long stride, back knee kisses the floor.", "Reverse Lunge|Step back softly, push through the front heel.", "Dumbbell Step-up|Box at knee height. Don't push off the back foot.", "Lateral Lunge|Sit into the hip, keep the other leg straight."],
-    hamcurl: ["Lying Leg Curl|Point toes up, lower slowly.", "Seated Leg Curl|Lean forward slightly for a bigger stretch.", "Nordic Hamstring Curl|Lower as slowly as you can. Catch yourself with your hands.", "Stability-Ball Leg Curl|Hips high the whole time."],
-    quadiso: ["Leg Extension|Hold the top for one second.", "Spanish Squat|Band behind the knees, sit straight down.", "Cyclist Squat|Heels raised, knees forward, torso upright."],
-    calves: ["Standing Calf Raise|Two-second pause at the bottom stretch.", "Seated Calf Raise|Full stretch, full squeeze.", "Single-Leg Calf Raise|Hold a dumbbell, slow on the way down."],
-    lateral: ["Dumbbell Lateral Raise|Light weight, no swing. Pause at the top.", "Cable Lateral Raise|Lead with the elbow, stop at shoulder height.", "Lean-Away Lateral Raise|Hold a post and lean out for a longer range.", "Machine Lateral Raise|Smooth reps, squeeze at the top."],
-    rear: ["Face Pull|Pull to the forehead and rotate thumbs back.", "Rear Delt Fly|Pinkies lead. Light and strict.", "Reverse Pec Deck|Arms long, sweep wide.", "Band Pull-Apart|Arms straight, squeeze the shoulder blades."],
-    fly: ["Cable Fly|Hug a tree. Squeeze when the hands meet.", "Dumbbell Fly|Slight bend in the elbows, deep stretch.", "Pec Deck|Pause one second when the handles meet.", "Low-to-High Cable Fly|Sweep up to eye level for the upper chest."],
-    triceps: ["Rope Triceps Pushdown|Elbows glued to your sides, spread the rope at the bottom.", "EZ-Bar Skull Crusher|Lower behind the head for a longer stretch.", "Overhead Cable Triceps Extension|Elbows point forward, full stretch at the bottom.", "Dumbbell Kickback|Upper arm parallel to the floor, lock out.", "Bench Dips|Shoulders down, elbows straight back."],
-    biceps: ["EZ-Bar Curl|Elbows stay still. Squeeze at the top.", "Hammer Curl|No swinging. Control the way down.", "Incline Dumbbell Curl|Let the arms hang back for a full stretch.", "Preacher Curl|Don't let the weight drop at the bottom.", "Cable Curl|Constant tension, slow lowering."],
+    lunge: ["Bulgarian Split Squat|Most of the weight on the front foot.", "Walking Lunge|Long stride, back knee kisses the floor.", "Reverse Lunge|Step back softly, push through the front heel.", "Dumbbell Step-up|Box at knee height. Don't push off the back foot.", "Lateral Lunge|Sit into the hip, keep the other leg straight.", "Split Squat|Stay tall and drop straight down.", "Barbell Lunge|Short controlled steps, torso upright."],
+    hamcurl: ["Lying Leg Curl|Point toes up, lower slowly.", "Seated Leg Curl|Lean forward slightly for a bigger stretch.", "Nordic Hamstring Curl|Lower as slowly as you can. Catch yourself with your hands.", "Stability-Ball Leg Curl|Hips high the whole time.", "Standing Leg Curl|Hips still, curl one heel to the glute."],
+    quadiso: ["Leg Extension|Hold the top for one second.", "Spanish Squat|Band behind the knees, sit straight down.", "Cyclist Squat|Heels raised, knees forward, torso upright.", "Reverse Nordic Curl|Lean back in a straight line from the knees."],
+    calves: ["Standing Calf Raise|Two-second pause at the bottom stretch.", "Seated Calf Raise|Full stretch, full squeeze.", "Single-Leg Calf Raise|Hold a dumbbell, slow on the way down.", "Leg Press Calf Raise|Balls of the feet on the plate, full stretch.", "Tibialis Raise|Back against a wall, lift your toes high."],
+    lateral: ["Dumbbell Lateral Raise|Light weight, no swing. Pause at the top.", "Cable Lateral Raise|Lead with the elbow, stop at shoulder height.", "Lean-Away Lateral Raise|Hold a post and lean out for a longer range.", "Machine Lateral Raise|Smooth reps, squeeze at the top.", "Rainbow Lateral Raise|Trace a slow arc from the hips to overhead.", "L Raise|Elbows bent to 90°, lead with the elbows."],
+    rear: ["Face Pull|Pull to the forehead and rotate thumbs back.", "Rear Delt Fly|Pinkies lead. Light and strict.", "Reverse Pec Deck|Arms long, sweep wide.", "Band Pull-Apart|Arms straight, squeeze the shoulder blades.", "Reverse Fly|Hinge forward, arms wide, squeeze the upper back.", "Cable Reverse Fly|Cross the cables and pull wide with long arms.", "High Face Pull|Set the pulley high and pull toward the forehead."],
+    fly: ["Cable Fly|Hug a tree. Squeeze when the hands meet.", "Dumbbell Fly|Slight bend in the elbows, deep stretch.", "Pec Deck|Pause one second when the handles meet.", "Low-to-High Cable Fly|Sweep up to eye level for the upper chest.", "Cable Crossover|Step forward, slight lean, cross the hands at the bottom.", "Incline Dumbbell Fly|Wide arc with soft elbows. Stop before the weights touch.", "Svend Press|Squeeze a plate between your palms and press straight out."],
+    triceps: ["Rope Triceps Pushdown|Elbows glued to your sides, spread the rope at the bottom.", "EZ-Bar Skull Crusher|Lower behind the head for a longer stretch.", "Overhead Cable Triceps Extension|Elbows point forward, full stretch at the bottom.", "Dumbbell Kickback|Upper arm parallel to the floor, lock out.", "Bench Dips|Shoulders down, elbows straight back.", "Tricep Pushdown|Elbows pinned, finish with straight arms.", "Overhead Tricep Extension|Elbows narrow, get a deep stretch.", "Dumbbell Skull Crusher|Lower beside the ears, elbows still.", "Reverse Grip Tricep Extension|Palms up, wrists straight."],
+    biceps: ["EZ-Bar Curl|Elbows stay still. Squeeze at the top.", "Hammer Curl|No swinging. Control the way down.", "Incline Dumbbell Curl|Let the arms hang back for a full stretch.", "Preacher Curl|Don't let the weight drop at the bottom.", "Cable Curl|Constant tension, slow lowering.", "Concentration Curl|Elbow braced on the thigh, squeeze at the top.", "Spider Curl|Chest on an incline bench, arms hanging straight.", "Drag Curl|Drag the bar up your body, elbows moving back.", "Waiter Curl|Hold one dumbbell under the top plate, palms flat.", "Cable Hammer Curl|Rope in neutral grip, elbows still.", "Bayesian Cable Curl|Face away with the arm behind you for a long stretch."],
     lats: ["Straight-Arm Pulldown|Arms long, sweep the bar to your thighs.", "Dumbbell Pullover|Big stretch, ribs stay down."],
-    traps: ["Dumbbell Shrug|Straight up, hold for one second.", "Barbell Shrug|No rolling. Straight up and down."],
-    core: ["Hanging Leg Raise|Curl the pelvis up, no swinging.", "Ab Wheel Rollout|Ribs down. Go only as far as you can hold.", "Pallof Press|Press out and resist the twist.", "Dead Bug|Lower back pressed into the floor the whole time.", "Cable Crunch|Round the spine, elbows toward the knees.", "Side Plank|Straight line from head to feet."],
+    traps: ["Dumbbell Shrug|Straight up, hold for one second.", "Barbell Shrug|No rolling. Straight up and down.", "Cable Shrug|Pull straight up and hold for a second.", "Incline Shrug|Chest on an incline bench, shoulders to the ears."],
+    core: ["Hanging Leg Raise|Curl the pelvis up, no swinging.", "Ab Wheel Rollout|Ribs down. Go only as far as you can hold.", "Pallof Press|Press out and resist the twist.", "Dead Bug|Lower back pressed into the floor the whole time.", "Cable Crunch|Round the spine, elbows toward the knees.", "Side Plank|Straight line from head to feet.", "Weighted Russian Twist|Rotate from the ribs, not just the arms.", "Weighted Sit-Up|Hold the weight at your chest and control the way down.", "Woodchopper|Pivot on the back foot, rotate through the torso."],
     carry: ["Farmer's Carry|Heavy but smooth. Tall posture, short steps.", "Suitcase Carry|Load one hand and don't lean.", "Front-Rack Carry|Elbows up, breathe behind the brace."],
-    bwpush: ["Push-ups|Body in one line, chest to the floor.", "Pike Push-up|Hips high, head lowers between the hands.", "Diamond Push-up|Hands together, elbows close to the body.", "Decline Push-up|Feet on a bench, slow lowering.", "Archer Push-up|Shift to one side, other arm long."],
+    bwpush: ["Push-ups|Body in one line, chest to the floor.", "Pike Push-up|Hips high, head lowers between the hands.", "Diamond Push-up|Hands together, elbows close to the body.", "Decline Push-up|Feet on a bench, slow lowering.", "Archer Push-up|Shift to one side, other arm long.", "Incline Push-Up|Hands on a bench, body in one line.", "Plyo Push-Up|Push hard enough for the hands to leave the floor."],
     bwpull: ["Pull-ups|Start from a dead hang, chest to the bar.", "Chin-ups|Full range. Stop one rep before your form slips.", "Inverted Row|Body straight, pull your chest to the bar or table edge.", "Towel Row|Door towel or rings. Squeeze the shoulder blades together."],
     bwlegs: ["Bodyweight Squat|Smooth tempo, full depth.", "Jump Squat|Land softly and go straight into the next rep.", "Bulgarian Split Squat|Most of the weight on the front foot.", "Pistol Squat to Box|Sit back to a box on one leg, stand without a push.", "Reverse Lunge|Step back softly, push through the front heel.", "Skater Squat|Back knee touches a pad, front heel stays down."],
     bwhinge: ["Single-Leg Glute Bridge|Push through the heel, keep the hips level.", "Single-Leg Romanian Deadlift|Reach the back heel toward the wall behind you.", "Glute Bridge|Pause and squeeze at the top."]
@@ -185,7 +185,8 @@
     "Headbanger", "Tricep Box Dip", "Wrist Curl", "Wrist Extension", "Hulk Hands",
     "Kettlebell Thumb Squeeze", "Copenhagen Plank", "Sit-Up", "Weighted Sit-Up", "Weighted Russian Twist",
     "Weighted Leg Raise", "Woodchopper", "Cable Trunk Rotation", "Kettlebell Orbit", "Incline Push-Up",
-    "Plyo Push-Up", "Weighted Push-Up"
+    "Plyo Push-Up", "Weighted Push-Up",
+    "Turkish Get-Up", "Run/Walk Intervals", "Interval Work", "Sweet Spot Intervals"
   ];
   const TOKENS = [
     "", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "18", "20", "25", "30",
@@ -193,7 +194,8 @@
     "30 s", "45 s", "60 s", "75 s", "90 s", "60–90 s", "2 min", "2–3 min", "3 min", "4 min", "5 min",
     "10 min", "15 min", "20 min", "30 min", "45 min", "60 min", "90 min",
     "5 / side", "8 / side", "10 / side", "8 / leg", "10 / leg", "20 s / side", "30 s / side", "40 m", "2000 m",
-    "6 × 3 min", "8 × 500 m", "10 × 100 m", "5 × 5 min", "10 × 15 s", "10 × 1 min", "8 × 1 min"
+    "6 × 3 min", "8 × 500 m", "10 × 100 m", "5 × 5 min", "10 × 15 s", "10 × 1 min", "8 × 1 min",
+    "5+", "3+", "1+", "3–5", "4–6", "5–8", "6–10", "8–12", "10–15", "12–20", "3–5 min", "2 hours", "200 yd", "75 yd", "100 yd", "20 s", "3 miles"
   ];
 
   // Set and rep prescriptions by slot role
@@ -1225,6 +1227,52 @@
     })));
   }
 
+  function loadPreset(p, phase) {
+    snapshot();
+    const week = emptyWeek();
+    (phase ? phase.week : p.week).forEach(d => {
+      week[d.d] = { name: d.n, type: cleanType(d.t), items: d.x.map(x => cleanItem({ name: x[0], sets: x[1], reps: x[2], rest: x[3], rpe: x[4], note: x[5], ss: x[6] === true })) };
+    });
+    plan.week = week;
+    plan.name = phase ? p.name + " · " + phase.label : p.name;
+    plan.weeks = phase ? 1 : p.weeks || 1;
+    plan.msg = "";
+    bDay = week.findIndex(d => d.items.length);
+    syncPlanFields(); changed(); renderBuild();
+    $("sheetDay").scrollIntoView({ block: "center" });
+    toast("Loaded " + plan.name);
+  }
+
+  let presetCat = "All";
+  function renderPresets() {
+    const cats = ["All", ...new Set(PRESETS.map(p => p.cat))];
+    const cc = $("presetCats"); cc.innerHTML = "";
+    cats.forEach(c => cc.appendChild(chip(c, c === presetCat, null, () => { presetCat = c; renderPresets(); })));
+    const list = $("presetList"); list.innerHTML = "";
+    PRESETS.filter(p => presetCat === "All" || p.cat === presetCat).forEach(p => {
+      const c = document.createElement("div");
+      c.className = "lib-card";
+      const span = p.phases ? p.phases.length + " phases" : p.weeks + " weeks";
+      c.innerHTML = "<h4>" + esc(p.name) + "</h4><p>" + esc(p.level) + " · " + p.days + " days a week · " + esc(span) + "</p><p>" + esc(p.about) + '</p><p class="credit">Based on ' + esc(p.based) + "</p>";
+      const row = document.createElement("div");
+      row.className = "row";
+      if (p.phases) p.phases.forEach(ph => {
+        const b = document.createElement("button");
+        b.className = "btn small"; b.textContent = ph.label;
+        b.addEventListener("click", () => loadPreset(p, ph));
+        row.appendChild(b);
+      });
+      else {
+        const b = document.createElement("button");
+        b.className = "btn small primary"; b.textContent = "Load program";
+        b.addEventListener("click", () => loadPreset(p));
+        row.appendChild(b);
+      }
+      c.appendChild(row);
+      list.appendChild(c);
+    });
+  }
+
   function renderBuild() { renderBuildWeek(); renderPicker(); renderSheet(); renderBuildBar(); }
 
   function planForShare() {
@@ -1329,6 +1377,7 @@
 
   render();
   renderTemplates();
+  renderPresets();
   renderBuild();
   checkShareLink();
   routeView();

@@ -246,6 +246,8 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
 .pick[aria-pressed="true"] .add { color: var(--accent); }
 .own { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; }
 .field.wide { grid-column: 1 / -1; }
+.presets { display: grid; gap: 12px; }
+.lib-card .credit { font-size: 12px; }
 .btn:disabled { opacity: 0.45; cursor: default; border-color: var(--line); }
 .xrow { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
 .xrow.linked { border-left: 3px solid var(--accent); }
@@ -412,7 +414,18 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
         <option value="1">1 week</option><option value="2">2 weeks</option><option value="3">3 weeks</option><option value="4">4 weeks</option>
         <option value="6">6 weeks</option><option value="8">8 weeks</option><option value="12">12 weeks</option>
       </select></label>
-      <div class="field wide"><span>Start from a template</span><div class="chips small" id="bTemplates" role="group" aria-label="Start from a template"></div></div>
+      <div class="field wide"><span>Generate a split</span><div class="chips small" id="bTemplates" role="group" aria-label="Generate a split"></div></div>
+    </section>
+
+    <section class="presets" aria-labelledby="presetTitle">
+      <div class="sec-head">
+        <div>
+          <div class="label">Start from a program</div>
+          <h2 class="sec" id="presetTitle">Proven programs</h2>
+        </div>
+        <div class="chips small" id="presetCats" role="group" aria-label="Filter programs"></div>
+      </div>
+      <div class="lib" id="presetList"></div>
     </section>
 
     <nav class="week" id="bWeek" aria-label="Days in this plan"></nav>
@@ -537,6 +550,7 @@ dialog::backdrop { background: rgba(10,12,14,0.55); }
 
 <div class="toast" id="toast" role="status" hidden></div>
 
+<script src="presets.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

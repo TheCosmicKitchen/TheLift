@@ -11,13 +11,14 @@ A daily training page: a lifting session and a cardio workout for every day, plu
 - **Change any day:** switch one day to a different session (Pull instead of Push, Sprints instead of Tempo), or press Swap for a fresh version of the same session.
 - **Checkmarks:** tick off each exercise or interval and watch the progress bar fill.
 - **Your own workouts:** build workouts under Lifting, Cardio, HIIT, Mobility, Core or Other, save them to a library, and add them to any day. Customize turns a suggested session into an editable copy.
-- **Plan builder:** pick exercises from a searchable list of 276, add your own, and set sets, reps, weight, rest, RPE and notes. Group supersets, reorder, duplicate, copy a day to another day, start from a split template, repeat a plan for up to 12 weeks, preview it, and undo mistakes. Open it at https://thecosmickitchen.github.io/TheLift/#build.
+- **Plan builder:** pick exercises from a searchable list of 280, add your own, and set sets, reps, weight, rest, RPE and notes. Group supersets, reorder, duplicate, copy a day to another day, start from a split template, repeat a plan for up to 12 weeks, preview it, and undo mistakes. Open it at https://thecosmickitchen.github.io/TheLift/#build.
+- **Program starters:** load a simplified version of a proven program, such as Couch to 5K, 5/3/1, PHUL or a sweet spot cycling base, then edit it and share it. Programs live in `presets.js`.
 - **Share links:** copy a link in one click and send a full plan or a single saved workout. Whoever opens the link sees a preview and chooses when to add it. No accounts, and the plan travels inside the link.
 - **Backup:** workouts and checkmarks are saved in your browser. Export a backup file to move them to another device, then import it there.
 
 ## How it's built
 
-`index.html` and `app.js`, with no build step and no dependencies apart from Google Fonts. Host them anywhere static. Serve them over http(s), because the page only runs scripts from its own site.
+`index.html`, `app.js` and `presets.js`, with no build step and no dependencies apart from Google Fonts. Host them anywhere static. Serve them over http(s), because the page only runs scripts from its own site.
 
 ## Compact links
 
