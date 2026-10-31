@@ -11,11 +11,24 @@ A daily training page: a lifting session and a cardio workout for every day, plu
 - **Change any day:** switch one day to a different session (Pull instead of Push, Sprints instead of Tempo), or press Swap for a fresh version of the same session.
 - **Checkmarks:** tick off each exercise or interval and watch the progress bar fill.
 - **Your own workouts:** build workouts under Lifting, Cardio, HIIT, Mobility, Core or Other, save them to a library, and add them to any day. Customize turns a suggested session into an editable copy.
+- **Build page:** pick days and exercises from a searchable list, set sets, reps and notes, then copy a share link in one click. Open it at https://thecosmickitchen.github.io/TheLift/#build.
+- **Share links:** send a full week or a single saved workout. Whoever opens the link sees a preview and chooses when to add it. No accounts, and the plan travels inside the link.
 - **Backup:** workouts and checkmarks are saved in your browser. Export a backup file to move them to another device, then import it there.
 
 ## How it's built
 
-One `index.html` file, with no build step and no dependencies apart from Google Fonts. Open it locally or host it anywhere static.
+`index.html` and `app.js`, with no build step and no dependencies apart from Google Fonts. Host them anywhere static. Serve them over http(s), because the page only runs scripts from its own site.
+
+## Share link safety
+
+Share links are treated as untrusted input:
+
+- **No code runs from a link.** Link contents are shown only as plain text, and a Content Security Policy blocks inline and injected scripts.
+- **Nothing is saved without a click.** A link opens a preview first, and it can only add new entries. It cannot change or delete existing workouts.
+- **No data leaves the page.** The site makes no data requests, and the part of the link holding the plan is never sent to a server.
+- **Size limits apply.** Oversized or malformed links are rejected, and every field has a length limit. Backup imports are cleaned the same way.
+
+Three limits to keep in mind: sender names are not verified, anyone with a link can read that plan, and a link cannot be cancelled once sent. Keep private details out of plan names and notes.
 
 ## Publish on GitHub Pages
 
