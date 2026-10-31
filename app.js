@@ -155,7 +155,37 @@
     "Tempo Run", "Interval Run", "Long Run", "Hill Sprints", "Steady Row",
     "Row Intervals", "2K Row", "Easy Ride", "Bike Intervals", "Climb Repeats",
     "Easy Swim", "Swim Intervals", "Brisk Walk", "Incline Walk", "Hike",
-    "Ski Erg Intervals", "Elliptical", "Stair Climber", "Jump Rope"
+    "Ski Erg Intervals", "Elliptical", "Stair Climber", "Jump Rope",
+    "Dip", "Assisted Dip", "Seated Dip Machine", "Cable Crossover", "Single Arm Cable Crossover",
+    "Single Arm Cable Fly", "Cable Pec Pull", "Decline Dumbbell Bench Press", "Dumbbell Grip Press", "Hex Press",
+    "Incline Dumbbell Fly", "Incline Svend Press", "Svend Press", "Plate Press", "Single Arm Dumbbell Press",
+    "Wide Grip Bench Press", "Wide Grip Dumbbell Bench Press", "Assisted Pull-Up", "Back Extension", "Close Grip Lat Pulldown",
+    "Wide Grip Lat Pulldown", "Underhand Lat Pulldown", "Single Arm Lat Pulldown", "Close Grip Row", "Wide Grip Row",
+    "Machine Row", "High Row", "Single Arm Cable Row", "Dumbbell High Row", "Dumbbell High Pull",
+    "Seated Mid Row", "Landmine Row", "Lying Row", "Three Point Row", "Neutral-Grip Pull-Up",
+    "Scapular Pull-Up", "Scapular Raise", "Cable Shrug", "Hex Bar Shrug", "Incline Shrug",
+    "Kelso Shrug", "Kettlebell Shrug", "Saber Pull", "Cable Bow Draw", "Landmine Press",
+    "Single Arm Landmine Press", "Seated Shoulder Press", "Standing Shoulder Press", "Machine Shoulder Press", "Front Raise",
+    "Cable Front Raise", "Plate Raise", "Rainbow Lateral Raise", "L Raise", "Butterfly Raise",
+    "UCV Raise", "Rear Delt Raise", "Reverse Fly", "Cable Reverse Fly", "Cable Shoulder Fly",
+    "High Face Pull", "Low Face Pull", "External Rotation", "Internal Rotation", "Scapular Punch",
+    "Plate Halo", "Split Squat", "Pause Squat", "Sumo Squat", "Zercher Squat",
+    "Hex Bar Squat", "Kettlebell Squat", "Dumbbell Shoulder Squat", "Elevated Heel Squat", "Elevated Heel Goblet Squat",
+    "Elevated Heel Hex Bar Squat", "Elevated Heel Kettlebell Squat", "Elevated Heel Hex Bar Deadlift", "Kettlebell Romanian Deadlift", "Kettlebell Swing",
+    "Cable Pull Through", "Barbell Lunge", "Deep Squat Walk", "Box Jump", "Standing Leg Curl",
+    "Assisted Ham Raise", "Reverse Nordic Curl", "Hip Abduction Machine", "Hip Adduction Machine", "Cable Hip Abduction",
+    "Hip Hugger", "Banded Side Step", "Monster Walk", "Lying Leg Side Raise", "Leg Press Calf Raise",
+    "Dumbbell Calf Raise", "Elevated Calf Raise", "Incline Calf Raise", "Tibialis Raise", "Barbell Bicep Curl",
+    "Dumbbell Bicep Curl", "Seated Bicep Curl", "Concentration Curl", "Cheat Curl", "Spider Curl",
+    "Drag Curl", "Incline Drag Curl", "Crossbody Curl", "Crossbody Hammer Curl", "Cable Hammer Curl",
+    "Cable High Curl", "Bayesian Cable Curl", "Behind The Body Cable Curl", "Preacher Hammer Curl", "Goblet Curl",
+    "Waiter Curl", "No Money Curl", "Lip Buster Curl", "Run The Rack Curl", "Tricep Pushdown",
+    "Tricep Pushdown Machine", "Single Arm Tricep Pushdown", "Cable Tricep Extension", "Reverse Grip Tricep Extension", "Overhead Tricep Extension",
+    "Cable Overhead Tricep Extension", "Dumbbell Overhead Tricep Extension", "EZ Bar Overhead Tricep Extension", "Behind The Body Tricep Extension", "Dumbbell Skull Crusher",
+    "Headbanger", "Tricep Box Dip", "Wrist Curl", "Wrist Extension", "Hulk Hands",
+    "Kettlebell Thumb Squeeze", "Copenhagen Plank", "Sit-Up", "Weighted Sit-Up", "Weighted Russian Twist",
+    "Weighted Leg Raise", "Woodchopper", "Cable Trunk Rotation", "Kettlebell Orbit", "Incline Push-Up",
+    "Plyo Push-Up", "Weighted Push-Up"
   ];
   const TOKENS = [
     "", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "18", "20", "25", "30",
@@ -985,15 +1015,65 @@
     ["Ski Erg Intervals", "8 × 1 min"], ["Elliptical", "30 min"], ["Stair Climber", "20 min"], ["Jump Rope", "10 × 1 min"]
   ].map(([name, reps]) => ({ name, cue: reps, sets: "1", reps }));
 
+  // Exercises from the group's training logs, normalized from hundreds of typed spellings
+  const LOGGED = {
+    chest: [
+      "Dip", "Assisted Dip", "Seated Dip Machine", "Cable Crossover", "Single Arm Cable Crossover", "Single Arm Cable Fly",
+      "Cable Pec Pull", "Decline Dumbbell Bench Press", "Dumbbell Grip Press", "Hex Press", "Incline Dumbbell Fly", "Incline Svend Press",
+      "Svend Press", "Plate Press", "Single Arm Dumbbell Press", "Wide Grip Bench Press", "Wide Grip Dumbbell Bench Press"
+    ],
+    back: [
+      "Assisted Pull-Up", "Back Extension", "Close Grip Lat Pulldown", "Wide Grip Lat Pulldown", "Underhand Lat Pulldown", "Single Arm Lat Pulldown",
+      "Close Grip Row", "Wide Grip Row", "Machine Row", "High Row", "Single Arm Cable Row", "Dumbbell High Row",
+      "Dumbbell High Pull", "Seated Mid Row", "Landmine Row", "Lying Row", "Three Point Row", "Neutral-Grip Pull-Up",
+      "Scapular Pull-Up", "Scapular Raise", "Cable Shrug", "Hex Bar Shrug", "Incline Shrug", "Kelso Shrug",
+      "Kettlebell Shrug", "Saber Pull", "Cable Bow Draw"
+    ],
+    shoulders: [
+      "Landmine Press", "Single Arm Landmine Press", "Seated Shoulder Press", "Standing Shoulder Press", "Machine Shoulder Press", "Front Raise",
+      "Cable Front Raise", "Plate Raise", "Rainbow Lateral Raise", "L Raise", "Butterfly Raise", "UCV Raise",
+      "Rear Delt Raise", "Reverse Fly", "Cable Reverse Fly", "Cable Shoulder Fly", "High Face Pull", "Low Face Pull",
+      "External Rotation", "Internal Rotation", "Scapular Punch", "Plate Halo"
+    ],
+    legs: [
+      "Split Squat", "Pause Squat", "Sumo Squat", "Zercher Squat", "Hex Bar Squat", "Kettlebell Squat",
+      "Dumbbell Shoulder Squat", "Elevated Heel Squat", "Elevated Heel Goblet Squat", "Elevated Heel Hex Bar Squat", "Elevated Heel Kettlebell Squat", "Elevated Heel Hex Bar Deadlift",
+      "Kettlebell Romanian Deadlift", "Kettlebell Swing", "Cable Pull Through", "Barbell Lunge", "Deep Squat Walk", "Box Jump",
+      "Standing Leg Curl", "Assisted Ham Raise", "Reverse Nordic Curl", "Hip Abduction Machine", "Hip Adduction Machine", "Cable Hip Abduction",
+      "Hip Hugger", "Banded Side Step", "Monster Walk", "Lying Leg Side Raise", "Leg Press Calf Raise", "Dumbbell Calf Raise",
+      "Elevated Calf Raise", "Incline Calf Raise", "Tibialis Raise"
+    ],
+    arms: [
+      "Barbell Bicep Curl", "Dumbbell Bicep Curl", "Seated Bicep Curl", "Concentration Curl", "Cheat Curl", "Spider Curl",
+      "Drag Curl", "Incline Drag Curl", "Crossbody Curl", "Crossbody Hammer Curl", "Cable Hammer Curl", "Cable High Curl",
+      "Bayesian Cable Curl", "Behind The Body Cable Curl", "Preacher Hammer Curl", "Goblet Curl", "Waiter Curl", "No Money Curl",
+      "Lip Buster Curl", "Run The Rack Curl", "Tricep Pushdown", "Tricep Pushdown Machine", "Single Arm Tricep Pushdown", "Cable Tricep Extension",
+      "Reverse Grip Tricep Extension", "Overhead Tricep Extension", "Cable Overhead Tricep Extension", "Dumbbell Overhead Tricep Extension", "EZ Bar Overhead Tricep Extension", "Behind The Body Tricep Extension",
+      "Dumbbell Skull Crusher", "Headbanger", "Tricep Box Dip", "Wrist Curl", "Wrist Extension", "Hulk Hands",
+      "Kettlebell Thumb Squeeze"
+    ],
+    core: [
+      "Copenhagen Plank", "Sit-Up", "Weighted Sit-Up", "Weighted Russian Twist", "Weighted Leg Raise", "Woodchopper",
+      "Cable Trunk Rotation", "Kettlebell Orbit"
+    ],
+    bw: [
+      "Incline Push-Up", "Plyo Push-Up", "Weighted Push-Up"
+    ]
+  };
+  const withLogged = (id, list) => list.concat(LOGGED[id].map(name => ({ name, cue: "", sets: "3", reps: "10" })));
+  // Common shorthand people search for
+  const SEARCH_WORDS = { rdl: "Romanian Deadlift", ohp: "Overhead Press", bss: "Bulgarian Split Squat", skullcrusher: "Skull Crusher", benchpress: "Bench Press", militarypress: "Overhead Press", pushdown: "Pushdown", trapbar: "Trap-Bar", hexbar: "Hex Bar" };
+  const searchKey = s => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+
   const fromPools = keys => [...new Map(keys.flatMap(k => POOL[k]).map(e => [e.name, { name: e.name, cue: e.cue, sets: "3", reps: "10" }])).values()];
   const PICK_GROUPS = [
-    { id: "chest", name: "Chest", list: fromPools(["hpush", "fly"]) },
-    { id: "back", name: "Back", list: fromPools(["vpull", "hpull", "deadlift", "lats", "traps"]) },
-    { id: "shoulders", name: "Shoulders", list: fromPools(["vpush", "lateral", "rear"]) },
-    { id: "legs", name: "Legs", list: fromPools(["squat", "hinge", "lunge", "quadiso", "hamcurl", "calves"]) },
-    { id: "arms", name: "Arms", list: fromPools(["biceps", "triceps"]) },
-    { id: "core", name: "Core", type: "core", list: fromPools(["core", "carry"]) },
-    { id: "bw", name: "Bodyweight", list: fromPools(["bwpush", "bwpull", "bwlegs", "bwhinge"]) },
+    { id: "chest", name: "Chest", list: withLogged("chest", fromPools(["hpush", "fly"])) },
+    { id: "back", name: "Back", list: withLogged("back", fromPools(["vpull", "hpull", "deadlift", "lats", "traps"])) },
+    { id: "shoulders", name: "Shoulders", list: withLogged("shoulders", fromPools(["vpush", "lateral", "rear"])) },
+    { id: "legs", name: "Legs", list: withLogged("legs", fromPools(["squat", "hinge", "lunge", "quadiso", "hamcurl", "calves"])) },
+    { id: "arms", name: "Arms", list: withLogged("arms", fromPools(["biceps", "triceps"])) },
+    { id: "core", name: "Core", type: "core", list: withLogged("core", fromPools(["core", "carry"])) },
+    { id: "bw", name: "Bodyweight", list: withLogged("bw", fromPools(["bwpush", "bwpull", "bwlegs", "bwhinge"])) },
     { id: "cardio", name: "Cardio", type: "cardio", list: CARDIO_PICKS },
     { id: "mobility", name: "Mobility", type: "mobility", list: [...new Map(LIFTS.recovery.flatMap(t => t.ex).map(e => [e.name, { name: e.name, cue: e.cue, sets: String(e.sets), reps: e.reps }])).values()] },
     { id: "saved", name: "My workouts", list: [] }
@@ -1041,18 +1121,18 @@
     PICK_GROUPS.forEach(g => gc.appendChild(chip(g.name, !pickQuery && pickGroup === g.id, null, () => {
       pickGroup = g.id; pickQuery = ""; $("pickSearch").value = ""; renderPicker();
     })));
-    const q = pickQuery.toLowerCase();
+    const q = searchKey(pickQuery), alt = SEARCH_WORDS[q] ? searchKey(SEARCH_WORDS[q]) : "";
     const seen = new Set();
     const list = (q ? PICK_GROUPS : PICK_GROUPS.filter(g => g.id === pickGroup))
       .flatMap(g => groupList(g).map(e => Object.assign({ group: g }, e)))
-      .filter(e => (!q || e.name.toLowerCase().includes(q)) && !seen.has(e.name) && seen.add(e.name));
+      .filter(e => (!q || searchKey(e.name).includes(q) || (alt && searchKey(e.name).includes(alt))) && !seen.has(e.name) && seen.add(e.name));
     const day = plan.week[bDay];
     const ul = $("picks"); ul.innerHTML = "";
     if (!list.length) { ul.innerHTML = '<li class="hint">No match. Add it as your own exercise below.</li>'; return; }
     list.forEach(e => {
       const on = !e.items && day.items.some(x => x.name === e.name);
       const li = document.createElement("li");
-      li.innerHTML = '<button class="pick" aria-pressed="' + on + '"><span>' + esc(e.name) + "<small>" + esc(e.cue) + '</small></span><span class="add">' + (on ? "✓" : "+") + "</span></button>";
+      li.innerHTML = '<button class="pick" aria-pressed="' + on + '"><span>' + esc(e.name) + (e.cue ? "<small>" + esc(e.cue) + "</small>" : "") + '</span><span class="add">' + (on ? "✓" : "+") + "</span></button>";
       li.firstChild.addEventListener("click", () => {
         if (on) day.items = day.items.filter(x => x.name !== e.name);
         else {
