@@ -1,8 +1,10 @@
 # TheLift
 
+> **TheLift has moved to [The Church of Iron](https://thecosmickitchen.github.io/the-junk-drawer/lift/).** https://thecosmickitchen.github.io/TheLift/ now forwards there. Shared plan and workout links (the ones with a `#` part) still open in the old page, which stays at https://thecosmickitchen.github.io/TheLift/classic.html so anyone can still reach their saved logs and export a backup.
+
 A daily training page: a lifting session and a cardio workout for every day, plus your own workouts with checkmarks.
 
-**Live site:** https://thecosmickitchen.github.io/TheLift/
+**Old page:** https://thecosmickitchen.github.io/TheLift/classic.html
 
 ## Features
 
@@ -11,7 +13,7 @@ A daily training page: a lifting session and a cardio workout for every day, plu
 - **Change any day:** switch one day to a different session (Pull instead of Push, Sprints instead of Tempo), or press Swap for a fresh version of the same session.
 - **Checkmarks:** tick off each exercise or interval and watch the progress bar fill.
 - **Your own workouts:** build workouts under Lifting, Cardio, HIIT, Mobility, Core or Other, save them to a library, and add them to any day. Customize turns a suggested session into an editable copy.
-- **Plan builder:** pick exercises from a searchable list of 280, add your own, and set sets, reps, weight, rest, RPE and notes. Group supersets, reorder, duplicate, copy a day to another day, start from a split template, repeat a plan for up to 12 weeks, preview it, and undo mistakes. Open it at https://thecosmickitchen.github.io/TheLift/#build.
+- **Plan builder:** pick exercises from a searchable list of 280, add your own, and set sets, reps, weight, rest, RPE and notes. Group supersets, reorder, duplicate, copy a day to another day, start from a split template, repeat a plan for up to 12 weeks, preview it, and undo mistakes. Open it at https://thecosmickitchen.github.io/TheLift/classic.html#build.
 - **Program starters:** load a simplified version of a proven program, such as Couch to 5K, 5/3/1, PHUL or a sweet spot cycling base, then edit it and share it. Programs live in `presets.js`.
 - **Share links:** copy a link in one click and send a full plan or a single saved workout. Whoever opens the link sees a preview and chooses when to add it. No accounts, and the plan travels inside the link.
 - **Logging:** press Log on any exercise to record weight and reps set by set, with last time shown.
